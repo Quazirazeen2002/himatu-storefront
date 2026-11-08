@@ -36,9 +36,14 @@ export function CategoryManagement() {
   const loadData = async () => {
     try {
       const cats = await getCategories();
-      setCategories(cats);
+      if (Array.isArray(cats)) {
+        setCategories(cats);
+      } else {
+        setCategories([]);
+      }
     } catch (err: any) {
-      console.error(err);
+      console.error("Failed to load categories:", err);
+      setCategories([]);
     }
   };
 
@@ -153,8 +158,15 @@ export function CategoryManagement() {
               </tr>
             </thead>
             <tbody>
-              {categories.map((c) => (
-                <tr key={c.id}>
+              {!Array.isArray(categories) || categories.length === 0 ? (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: "center", padding: "40px", color: "var(--admin-muted)" }}>
+                    No categories found. Click &quot;+ Add Category&quot; to create one.
+                  </td>
+                </tr>
+              ) : (
+                categories.map((c) => (
+                  <tr key={c.id}>
                   <td style={{ fontWeight: 800 }}>{c.name}</td>
                   <td style={{ fontFamily: "var(--font-metadata, monospace)", fontSize: "12px", color: "var(--admin-muted)" }}>
                     {c.slug}
@@ -190,7 +202,7 @@ export function CategoryManagement() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>

@@ -409,13 +409,36 @@ export async function GET(
       });
     }
 
-    // 9. /admin/products
-    if (path === "admin/products") {
+    // 9. /admin/products or /products
+    if (path === "admin/products" || path === "products") {
       const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
       const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || "20")));
+      const search = url.searchParams.get("search")?.trim();
+      const category = url.searchParams.get("category");
       const skip = (page - 1) * limit;
 
-      const countRes = await pool.query(`SELECT COUNT(*) as total FROM "Product"`);
+      const conditions: string[] = [];
+      const values: any[] = [];
+      let paramIdx = 1;
+
+      if (search) {
+        conditions.push(`(p.name ILIKE $${paramIdx} OR p.sku ILIKE $${paramIdx})`);
+        values.push(`%${search}%`);
+        paramIdx++;
+      }
+
+      if (category) {
+        conditions.push(`c.slug = $${paramIdx}`);
+        values.push(category);
+        paramIdx++;
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+
+      const countRes = await pool.query(
+        `SELECT COUNT(*) as total FROM "Product" p LEFT JOIN "Category" c ON p."categoryId" = c.id ${whereClause}`,
+        values
+      );
       const total = Number(countRes.rows[0]?.total || 0);
 
       const res = await pool.query(
@@ -425,16 +448,17 @@ export async function GET(
          FROM "Product" p
          LEFT JOIN "Category" c ON p."categoryId" = c.id
          LEFT JOIN "Inventory" i ON p.id = i."productId"
+         ${whereClause}
          ORDER BY p."createdAt" DESC
-         LIMIT $1 OFFSET $2`,
-        [limit, skip]
+         LIMIT $${paramIdx++} OFFSET $${paramIdx++}`,
+        [...values, limit, skip]
       );
 
       return NextResponse.json({
         items: res.rows.map((r) => ({
           ...r,
           images: r.images || [],
-          inventory: { quantity: r.stockQuantity || 0 },
+          inventory: { quantity: r.stockQuantity || 0, availableQuantity: r.stockQuantity || 0 },
         })),
         total,
         page,
@@ -443,8 +467,8 @@ export async function GET(
       });
     }
 
-    // 10. /admin/categories
-    if (path === "admin/categories") {
+    // 10. /admin/categories or /categories
+    if (path === "admin/categories" || path === "categories") {
       const res = await pool.query(`SELECT * FROM "Category" ORDER BY "displayOrder" ASC`);
       return NextResponse.json(res.rows);
     }
@@ -452,12 +476,70 @@ export async function GET(
     // 11. /admin/inventory
     if (path === "admin/inventory") {
       const res = await pool.query(
-        `SELECT i.*, p.name as "productName", p.sku, p.price
+        `SELECT i.*, p.name as "productName", p.sku, p.price, p.slug as "productSlug"
          FROM "Inventory" i
          JOIN "Product" p ON i."productId" = p.id
          ORDER BY i.quantity ASC`
       );
       return NextResponse.json(res.rows);
+    }
+
+    // 12. Single product by slug or id
+    if (path.startsWith("products/")) {
+      const productSlug = path.split("/")[1];
+      const res = await pool.query(
+        `SELECT p.*, c.name as "categoryName", c.slug as "categorySlug",
+                i.quantity as "stockQuantity",
+                (SELECT json_agg(img.* ORDER BY img."sortOrder" ASC) FROM "ProductImage" img WHERE img."productId" = p.id) as images
+         FROM "Product" p
+         LEFT JOIN "Category" c ON p."categoryId" = c.id
+         LEFT JOIN "Inventory" i ON p.id = i."productId"
+         WHERE p.slug = $1 OR p.id::text = $1
+         LIMIT 1`,
+        [productSlug]
+      );
+      if (res.rows.length === 0) {
+        return NextResponse.json({ error: "Product not found" }, { status: 404 });
+      }
+      const p = res.rows[0];
+      return NextResponse.json({
+        ...p,
+        images: p.images || [],
+        inventory: { quantity: p.stockQuantity || 0, availableQuantity: p.stockQuantity || 0 },
+      });
+    }
+
+    // 13. Printing requests
+    if (path === "admin/printing/requests" || path === "printing/requests") {
+      const res = await pool.query(
+        `SELECT pr.*, u.email as "userEmail", u."fullName" as "userName"
+         FROM "PrintingRequest" pr
+         LEFT JOIN "UserProfile" u ON pr."userId" = u.id
+         ORDER BY pr."createdAt" DESC
+         LIMIT 50`
+      );
+      return NextResponse.json({
+        items: res.rows.map((r) => ({
+          ...r,
+          createdAt: new Date(r.createdAt).toISOString(),
+          updatedAt: new Date(r.updatedAt).toISOString(),
+        })),
+        total: res.rows.length,
+        page: 1,
+        limit: 50,
+      });
+    }
+
+    // 14. Printing production board
+    if (path === "admin/printing/production/board") {
+      return NextResponse.json({
+        QUEUED: [],
+        SLICING: [],
+        PRINTING: [],
+        POST_PROCESSING: [],
+        QUALITY_CHECK: [],
+        READY_TO_DISPATCH: [],
+      });
     }
 
     return NextResponse.json({ message: `Path ${path} received` }, { status: 200 });
@@ -486,14 +568,14 @@ export async function PATCH(
 
   const path = slug.join("/");
 
-  // /admin/orders/:id/status
-  if (path.startsWith("admin/orders/") && path.endsWith("/status")) {
-    const parts = path.split("/");
-    const orderId = parts[2];
-    const body = await request.json();
-    const { status: newStatus, reason } = body;
+  try {
+    // /admin/orders/:id/status
+    if (path.startsWith("admin/orders/") && path.endsWith("/status")) {
+      const parts = path.split("/");
+      const orderId = parts[2];
+      const body = await request.json();
+      const { status: newStatus, reason } = body;
 
-    try {
       const checkRes = await pool.query(`SELECT * FROM "Order" WHERE id = $1`, [orderId]);
       if (checkRes.rows.length === 0) {
         return NextResponse.json({ error: "Order not found" }, { status: 404 });
@@ -525,12 +607,74 @@ export async function PATCH(
       }
 
       return NextResponse.json(updateRes.rows[0]);
-    } catch (err: any) {
-      return NextResponse.json({ error: err.message }, { status: 500 });
     }
-  }
 
-  return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // /admin/categories/:id
+    if (path.startsWith("admin/categories/")) {
+      const categoryId = path.split("/")[2];
+      const body = await request.json();
+      const { name, slug: catSlug, description, displayOrder, isActive } = body;
+      const updates: string[] = [];
+      const values: any[] = [];
+      let idx = 1;
+      if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
+      if (catSlug !== undefined) { updates.push(`slug = $${idx++}`); values.push(catSlug); }
+      if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+      if (displayOrder !== undefined) { updates.push(`"displayOrder" = $${idx++}`); values.push(displayOrder); }
+      if (isActive !== undefined) { updates.push(`"isActive" = $${idx++}`); values.push(isActive); }
+      updates.push(`"updatedAt" = NOW()`);
+      values.push(categoryId);
+      const res = await pool.query(
+        `UPDATE "Category" SET ${updates.join(", ")} WHERE id = $${idx} RETURNING *`,
+        values
+      );
+      return NextResponse.json(res.rows[0]);
+    }
+
+    // /admin/products/:id
+    if (path.startsWith("admin/products/")) {
+      const productId = path.split("/")[2];
+      const body = await request.json();
+      const {
+        name,
+        slug: prodSlug,
+        sku,
+        shortDescription,
+        description,
+        price,
+        salePrice,
+        categoryId,
+        isActive,
+        isFeatured,
+        specifications,
+      } = body;
+      const updates: string[] = [];
+      const values: any[] = [];
+      let idx = 1;
+      if (name !== undefined) { updates.push(`name = $${idx++}`); values.push(name); }
+      if (prodSlug !== undefined) { updates.push(`slug = $${idx++}`); values.push(prodSlug); }
+      if (sku !== undefined) { updates.push(`sku = $${idx++}`); values.push(sku); }
+      if (shortDescription !== undefined) { updates.push(`"shortDescription" = $${idx++}`); values.push(shortDescription); }
+      if (description !== undefined) { updates.push(`description = $${idx++}`); values.push(description); }
+      if (price !== undefined) { updates.push(`price = $${idx++}`); values.push(price); }
+      if (salePrice !== undefined) { updates.push(`"salePrice" = $${idx++}`); values.push(salePrice); }
+      if (categoryId !== undefined) { updates.push(`"categoryId" = $${idx++}`); values.push(categoryId); }
+      if (isActive !== undefined) { updates.push(`"isActive" = $${idx++}`); values.push(isActive); }
+      if (isFeatured !== undefined) { updates.push(`"isFeatured" = $${idx++}`); values.push(isFeatured); }
+      if (specifications !== undefined) { updates.push(`specifications = $${idx++}`); values.push(JSON.stringify(specifications)); }
+      updates.push(`"updatedAt" = NOW()`);
+      values.push(productId);
+      const res = await pool.query(
+        `UPDATE "Product" SET ${updates.join(", ")} WHERE id = $${idx} RETURNING *`,
+        values
+      );
+      return NextResponse.json(res.rows[0]);
+    }
+
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
 
 export async function POST(
@@ -540,6 +684,127 @@ export async function POST(
   const { slug } = await params;
   const proxied = await forwardToBackend(request, slug);
   if (proxied) return proxied;
+
+  const pool = getDbPool();
+  if (!pool) {
+    return NextResponse.json(
+      { error: "Database not configured" },
+      { status: 503 },
+    );
+  }
+
+  const path = slug.join("/");
+
+  try {
+    // /admin/categories
+    if (path === "admin/categories" || path === "categories") {
+      const body = await request.json();
+      const { name, slug: catSlug, description, displayOrder } = body;
+      const res = await pool.query(
+        `INSERT INTO "Category" (id, name, slug, description, "displayOrder", "isActive", "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, true, NOW(), NOW())
+         RETURNING *`,
+        [name, catSlug, description || null, displayOrder || 0]
+      );
+      return NextResponse.json(res.rows[0], { status: 201 });
+    }
+
+    // /admin/products
+    if (path === "admin/products" || path === "products") {
+      const body = await request.json();
+      const {
+        name,
+        slug: prodSlug,
+        sku,
+        shortDescription,
+        description,
+        price,
+        salePrice,
+        categoryId,
+        isActive,
+        isFeatured,
+        initialStock,
+        specifications,
+      } = body;
+
+      const prodRes = await pool.query(
+        `INSERT INTO "Product" (id, name, slug, sku, "shortDescription", description, price, "salePrice", "categoryId", "isActive", "isFeatured", specifications, "createdAt", "updatedAt")
+         VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+         RETURNING *`,
+        [
+          name,
+          prodSlug,
+          sku,
+          shortDescription || null,
+          description,
+          price,
+          salePrice || null,
+          categoryId,
+          isActive ?? true,
+          isFeatured ?? false,
+          JSON.stringify(specifications || {}),
+        ]
+      );
+      const newProd = prodRes.rows[0];
+
+      if (initialStock !== undefined) {
+        await pool.query(
+          `INSERT INTO "Inventory" (id, "productId", quantity, "reservedQuantity", "createdAt", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, 0, NOW(), NOW())`,
+          [newProd.id, initialStock]
+        );
+      }
+
+      return NextResponse.json(newProd, { status: 201 });
+    }
+
+    // /admin/inventory/:productId/adjust
+    if (path.startsWith("admin/inventory/") && path.endsWith("/adjust")) {
+      const productId = path.split("/")[2];
+      const body = await request.json();
+      const { quantity, reservedQuantity } = body;
+      const check = await pool.query(`SELECT id FROM "Inventory" WHERE "productId" = $1`, [productId]);
+      let res;
+      if (check.rows.length > 0) {
+        res = await pool.query(
+          `UPDATE "Inventory" SET quantity = $1, "reservedQuantity" = COALESCE($2, "reservedQuantity"), "updatedAt" = NOW() WHERE "productId" = $3 RETURNING *`,
+          [quantity, reservedQuantity ?? null, productId]
+        );
+      } else {
+        res = await pool.query(
+          `INSERT INTO "Inventory" (id, "productId", quantity, "reservedQuantity", "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, COALESCE($3, 0), NOW(), NOW()) RETURNING *`,
+          [productId, quantity, reservedQuantity ?? 0]
+        );
+      }
+      return NextResponse.json(res.rows[0]);
+    }
+
+    return NextResponse.json({ ok: true });
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ slug: string[] }> },
+) {
+  const { slug } = await params;
+  const proxied = await forwardToBackend(request, slug);
+  if (proxied) return proxied;
+
+  const pool = getDbPool();
+  if (!pool) return NextResponse.json({ error: "DB not configured" }, { status: 503 });
+
+  const path = slug.join("/");
+  if (path.startsWith("admin/products/")) {
+    const productId = path.split("/")[2];
+    const res = await pool.query(
+      `UPDATE "Product" SET "isActive" = false, "updatedAt" = NOW() WHERE id = $1 RETURNING *`,
+      [productId]
+    );
+    return NextResponse.json(res.rows[0]);
+  }
 
   return NextResponse.json({ ok: true });
 }
