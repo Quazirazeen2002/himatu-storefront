@@ -1,0 +1,20 @@
+### Result
+{"out":[{"name":"sign in required validation","pass":true},{"name":"password toggle false","pass":true},{"name":"local auth response false","pass":true},{"name":"registration required validation","pass":true},{"name":"password toggle true","pass":true},{"name":"local auth response true","pass":true},{"name":"printing required validation","pass":true},{"name":"printing local image preview","pass":true},{"name":"printing local validation response","pass":true},{"name":"ascending price ordering","pass":true},{"name":"mobile page2 fits","pass":true},{"name":"mobile filter resets page","pass":true}],"consoleErrors":[]}
+### Ran Playwright code
+```js
+await (async page=>{
+const base='http://localhost:3001',out=[],errors=[];page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});const check=(name,pass)=>{out.push({name,pass});if(!pass)throw Error(name)};
+await page.setViewportSize({width:1440,height:900});
+for(const create of [false,true]){await page.goto(base+(create?'/create-account':'/sign-in'));const form=page.locator('.auth-form form');await form.locator('button[type=submit],button.button').click();check((create?'registration':'sign in')+' required validation',await form.locator('[aria-invalid=true]').count()===(create?3:2));if(create)await page.locator('#name').fill('Example');await page.locator('#email').fill('collector@example.com');await page.locator('#password').fill('ExamplePassword123');await page.getByRole('button',{name:'Show password'}).click();check('password toggle '+create,await page.locator('#password').getAttribute('type')==='text');await form.locator('button[type=submit],button.button').click();await page.waitForSelector('.auth-form [role=status]');check('local auth response '+create,true);}
+await page.goto(base+'/3d-printing');await page.getByRole('button',{name:'VALIDATE INQUIRY · DEMO'}).click();check('printing required validation',await page.locator('#quotation [aria-invalid=true]').count()>=6);
+for(const [id,value]of Object.entries({customerName:'Example Collector',inquiryEmail:'collector@example.com',inquiryPhone:'01712345678',characterName:'Original concept',franchise:'Original',dimensions:'20cm concept'}))await page.locator('#'+id).fill(value);
+await page.locator('input[type=file]').setInputFiles({name:'example.png',mimeType:'image/png',buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aL1sAAAAASUVORK5CYII=','base64')});await page.waitForSelector('button[aria-label="Remove reference image"]');check('printing local image preview',true);await page.getByRole('button',{name:'VALIDATE INQUIRY · DEMO'}).click();await page.waitForSelector('#quotation [role=status]');check('printing local validation response',true);
+await page.goto(base+'/shop?sort=low');await page.waitForSelector('.product-card');const prices=await page.locator('.discovery-layout .product-card .price').allTextContents();check('ascending price ordering',[...prices].map(x=>Number(x.replace(/[^0-9]/g,''))).every((x,i,a)=>!i||x>=a[i-1]));
+await page.setViewportSize({width:320,height:812});await page.goto(base+'/shop?page=2');await page.waitForSelector('.pagination');check('mobile page2 fits',await page.evaluate(()=>document.documentElement.scrollWidth===innerWidth));await page.getByRole('button',{name:/Filters/,exact:false}).click();await page.waitForSelector('dialog[open]');await page.locator('dialog[open] select').last().selectOption('Collectible concept');await page.waitForFunction(()=>!location.search.includes('page='));check('mobile filter resets page',true);await page.keyboard.press('Escape');
+return {out,consoleErrors:errors};
+}
+)(page);
+```
+### Page
+- Page URL: http://localhost:3001/shop?type=Collectible+concept
+- Page Title: Shop figures | HIMATU

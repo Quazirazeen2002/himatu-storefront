@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900">
+<rect width="100%" height="100%" fill="#F7F7F5"/>
+<style>
+.t{font-family:Arial,sans-serif;fill:#111}.m{font-family:Arial,sans-serif;fill:#777}
+.sm{font-size:11px;letter-spacing:1.4px}.h1{font-size:64px;font-weight:800;letter-spacing:-3px}
+.h2{font-size:38px;font-weight:800;letter-spacing:-1.5px}.b{font-size:15px}
+</style><rect width="1440" height="900" fill="#F7F7F5"/><rect width="720" height="900" fill="#111"/>
+<text x="70" y="85" class="t h2" fill="#fff">HEMATU</text><text x="70" y="760" class="t h2" fill="#fff">JOIN THE UNIVERSE.</text><text x="70" y="805" class="m b" fill="#aaa">Track orders. Save your collection. Get first access to drops.</text>
+<text x="820" y="150" class="t h1">SIGN IN</text><text x="820" y="200" class="m b">Welcome back.</text>
+<text x="820" y="270" class="t sm">EMAIL</text><rect x="820" y="290" width="500" height="58" fill="#fff" stroke="#CCC"/><text x="842" y="326" class="m b">Email address</text>
+<text x="820" y="390" class="t sm">PASSWORD</text><rect x="820" y="410" width="500" height="58" fill="#fff" stroke="#CCC"/><text x="842" y="446" class="m b">Password</text><text x="1320" y="445" class="m sm" text-anchor="end">SHOW</text>
+<text x="820" y="505" class="m sm">FORGOT PASSWORD?</text><rect x="820" y="545" width="500" height="58" fill="#111"/><text x="1070" y="580" class="t sm" fill="#fff" text-anchor="middle">SIGN IN →</text>
+<line x1="820" y1="650" x2="1320" y2="650" stroke="#DDD"/><text x="1070" y="700" class="m b" text-anchor="middle">NEW TO HEMATU?</text><rect x="820" y="730" width="500" height="58" fill="#fff" stroke="#111"/><text x="1070" y="765" class="t sm" text-anchor="middle">CREATE ACCOUNT</text></svg>

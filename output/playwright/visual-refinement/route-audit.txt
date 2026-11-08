@@ -1,0 +1,23 @@
+### Result
+{"checked":210,"routes":35,"widths":6,"failures":[],"errors":[],"assetFailures":[],"redirects":[{"slug":"leaf-village-shinobi","url":"http://localhost:3001/collections/naruto"},{"slug":"limitless-sorcerer","url":"http://localhost:3001/collections/jujutsu-kaisen"},{"slug":"sun-breathing-swordsman","url":"http://localhost:3001/collections/demon-slayer"},{"slug":"earths-warrior","url":"http://localhost:3001/collections/dragon-ball"}],"missingStatus":404}
+### Ran Playwright code
+```js
+await (async page => {
+const base='http://localhost:3001';
+const routes=['/','/shop','/collections','/3d-printing','/campaign','/about','/contact','/faqs','/privacy','/terms','/shipping-returns','/wishlist','/account','/account/orders','/bag','/checkout','/sign-in','/create-account','/order-confirmation',...['one-piece','naruto','dragon-ball','jujutsu-kaisen','demon-slayer','other-collections'].map(s=>'/collections/'+s),...['straw-hat-captain','zoro-three-sword-style','ace-chibi','zoro-asura','sanji-chibi','luffy-gear-five-action','zoro-chibi','aether-forged-swordsman','celestial-wayfarer','veiled-shadow-fighter'].map(s=>'/products/'+s)];
+const errors=[];const failures=[];const failedResponses=[];let checked=0;
+page.on('pageerror',e=>errors.push(e.message));page.on('response',r=>{if(r.status()>=400)failedResponses.push({url:r.url(),status:r.status()})});
+for(const width of [320,375,390,768,1024,1440]){await page.setViewportSize({width,height:900});for(const route of routes){const response=await page.goto(base+route);await page.waitForSelector('h1');await page.evaluate(()=>document.fonts.ready);await page.waitForFunction(()=>document.querySelectorAll('h1').length===1);const state=await page.evaluate(()=>({overflow:document.documentElement.scrollWidth>innerWidth,h1:document.querySelectorAll('h1').length}));if(response.status()!==200||state.overflow||state.h1!==1)failures.push({width,route,status:response.status(),...state});checked++;}}
+const redirects=[];for(const slug of ['leaf-village-shinobi','limitless-sorcerer','sun-breathing-swordsman','earths-warrior']){await page.goto(base+'/products/'+slug);redirects.push({slug,url:page.url()});}
+const assetFailures=failedResponses.slice();const missing=await page.goto(base+'/products/not-a-real-product');
+return {checked,routes:routes.length,widths:6,failures,errors,assetFailures,redirects,missingStatus:missing.status()};
+}
+)(page);
+```
+### Page
+- Page URL: http://localhost:3001/products/not-a-real-product
+- Page Title: HIMATU — Discover. Collect. Display.
+- HTTP status: 404 Not Found
+- Console: 1 errors, 0 warnings
+### Events
+- New console entries: .playwright-cli/console-2026-11-08T00-19-43-671Z.log#L2-L3
