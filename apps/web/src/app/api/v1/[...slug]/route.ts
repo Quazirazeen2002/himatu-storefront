@@ -409,6 +409,57 @@ export async function GET(
       });
     }
 
+    // 9. /admin/products
+    if (path === "admin/products") {
+      const page = Math.max(1, Number(url.searchParams.get("page") || "1"));
+      const limit = Math.max(1, Math.min(100, Number(url.searchParams.get("limit") || "20")));
+      const skip = (page - 1) * limit;
+
+      const countRes = await pool.query(`SELECT COUNT(*) as total FROM "Product"`);
+      const total = Number(countRes.rows[0]?.total || 0);
+
+      const res = await pool.query(
+        `SELECT p.*, c.name as "categoryName", c.slug as "categorySlug",
+                i.quantity as "stockQuantity",
+                (SELECT json_agg(img.* ORDER BY img."sortOrder" ASC) FROM "ProductImage" img WHERE img."productId" = p.id) as images
+         FROM "Product" p
+         LEFT JOIN "Category" c ON p."categoryId" = c.id
+         LEFT JOIN "Inventory" i ON p.id = i."productId"
+         ORDER BY p."createdAt" DESC
+         LIMIT $1 OFFSET $2`,
+        [limit, skip]
+      );
+
+      return NextResponse.json({
+        items: res.rows.map((r) => ({
+          ...r,
+          images: r.images || [],
+          inventory: { quantity: r.stockQuantity || 0 },
+        })),
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit) || 1,
+      });
+    }
+
+    // 10. /admin/categories
+    if (path === "admin/categories") {
+      const res = await pool.query(`SELECT * FROM "Category" ORDER BY "displayOrder" ASC`);
+      return NextResponse.json(res.rows);
+    }
+
+    // 11. /admin/inventory
+    if (path === "admin/inventory") {
+      const res = await pool.query(
+        `SELECT i.*, p.name as "productName", p.sku, p.price
+         FROM "Inventory" i
+         JOIN "Product" p ON i."productId" = p.id
+         ORDER BY i.quantity ASC`
+      );
+      return NextResponse.json(res.rows);
+    }
+
     return NextResponse.json({ message: `Path ${path} received` }, { status: 200 });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || "Failed to process request" }, { status: 500 });

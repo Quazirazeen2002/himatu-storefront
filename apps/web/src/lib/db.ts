@@ -7,14 +7,17 @@ export function getDbPool(): Pool | null {
   if (!connectionString) return null;
 
   if (!pool) {
+    // Strip sslmode from query params so rejectUnauthorized: false takes effect on cloud
+    const cleanConnectionString = connectionString.replace(/[?&]sslmode=[^&]+/, "");
+
     pool = new Pool({
-      connectionString,
+      connectionString: cleanConnectionString,
       ssl: {
         rejectUnauthorized: false,
       },
       max: 5,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 5000,
+      connectionTimeoutMillis: 10000,
     });
   }
 
