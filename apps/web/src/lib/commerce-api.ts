@@ -35,10 +35,16 @@ import type {
   CreateProductionUpdateDto,
 } from "@himatu/shared";
 
-const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL ||
-  process.env.API_URL ||
-  "http://localhost:4000";
+function getApiBase(): string {
+  if (process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL;
+  }
+  // In the browser, default to same-origin relative URL so there are no mixed-content or CORS failures
+  if (typeof window !== "undefined") {
+    return "";
+  }
+  return process.env.API_URL || "http://localhost:4000";
+}
 
 interface FetchOptions extends RequestInit {
   token?: string;
@@ -61,7 +67,8 @@ async function request<T>(endpoint: string, options: FetchOptions = {}): Promise
     requestHeaders["Content-Type"] = "application/json";
   }
 
-  const url = `${API_BASE}/api/v1${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
+  const base = getApiBase();
+  const url = `${base}/api/v1${endpoint.startsWith("/") ? endpoint : `/${endpoint}`}`;
 
   const res = await fetch(url, {
     ...rest,
