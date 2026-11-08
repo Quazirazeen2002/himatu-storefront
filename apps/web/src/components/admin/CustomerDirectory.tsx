@@ -37,11 +37,12 @@ export function CustomerDirectory() {
         limit: 20,
         search: s.trim() || undefined,
       });
-      setCustomers(data.items);
-      setTotalCount(data.total);
-      setTotalPages(data.totalPages);
+      setCustomers(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(data?.total || 0);
+      setTotalPages(data?.totalPages || 1);
     } catch (err) {
       console.error(err);
+      setCustomers([]);
     }
   };
 
@@ -125,7 +126,7 @@ export function CustomerDirectory() {
 
       {/* Customers Table */}
       <div className="admin-card">
-        {customers.length === 0 ? (
+        {!Array.isArray(customers) || customers.length === 0 ? (
           <div style={{ padding: "40px", textAlign: "center", color: "var(--admin-muted)" }}>
             No registered customers found matching your search.
           </div>

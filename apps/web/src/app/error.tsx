@@ -1,6 +1,21 @@
 "use client";
+
+import { useEffect } from "react";
 import { Container, Button, ButtonLink } from "@/components/ui/Primitives";
-export default function ErrorPage({ reset }: { reset: () => void }) {
+
+export default function ErrorPage({
+  error,
+  reset,
+}: {
+  error?: Error & { digest?: string };
+  reset: () => void;
+}) {
+  useEffect(() => {
+    if (error) {
+      console.error("Root storefront error caught:", error);
+    }
+  }, [error]);
+
   return (
     <Container className="info-page">
       <p className="eyebrow">A PAUSE IN THE STORY</p>

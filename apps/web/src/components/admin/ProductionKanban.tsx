@@ -56,7 +56,9 @@ export function ProductionKanban() {
   const loadData = async (token: string) => {
     try {
       const data = await getAdminProductionBoard(token);
-      setBoard(data);
+      if (data && typeof data === "object") {
+        setBoard(data);
+      }
     } catch (err: any) {
       console.error(err);
       setFeedback({ type: "error", text: err.message || "Failed to load production board." });

@@ -61,9 +61,9 @@ export function AdminDashboardOverview() {
         getAdminOrders(token, { limit: 5 }),
       ]);
       setSummary(sum);
-      setRevenuePoints(rev);
-      setTopProducts(top);
-      setRecentOrders(ordersData.items);
+      setRevenuePoints(Array.isArray(rev) ? rev : []);
+      setTopProducts(Array.isArray(top) ? top : []);
+      setRecentOrders(Array.isArray(ordersData?.items) ? ordersData.items : []);
     } catch (err) {
       console.error("Dashboard load error:", err);
     }

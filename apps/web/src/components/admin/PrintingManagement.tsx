@@ -69,8 +69,8 @@ export function PrintingManagement() {
         status: statusFilter === "ALL" ? undefined : statusFilter,
         search: searchQuery || undefined,
       });
-      setRequests(data.items);
-      setTotal(data.total);
+      setRequests(Array.isArray(data?.items) ? data.items : []);
+      setTotal(data?.total || 0);
     } catch (err: any) {
       console.error(err);
       setFeedback({ type: "error", text: err.message || "Failed to load printing requests." });

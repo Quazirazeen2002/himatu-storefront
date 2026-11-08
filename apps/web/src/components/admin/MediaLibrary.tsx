@@ -36,7 +36,8 @@ export function MediaLibrary() {
         try {
           const prods = await getAdminProducts(s.accessToken, { limit: 100 });
           const flatList: FlatImage[] = [];
-          for (const p of prods.items) {
+          const items = Array.isArray(prods?.items) ? prods.items : [];
+          for (const p of items) {
             for (const img of p.images || []) {
               flatList.push({
                 ...img,

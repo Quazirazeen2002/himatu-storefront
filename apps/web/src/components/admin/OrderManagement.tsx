@@ -59,13 +59,13 @@ export function OrderManagement() {
         status: st,
         search: s.trim() || undefined,
       });
-      setOrders(data.items);
-      setTotalCount(data.total);
-      setTotalPages(data.totalPages);
+      setOrders(Array.isArray(data?.items) ? data.items : []);
+      setTotalCount(data?.total || 0);
+      setTotalPages(data?.totalPages || 1);
 
       // Check if URL query specified an order to view
       const targetOrderNumber = searchParams.get("order");
-      if (targetOrderNumber && !activeOrder) {
+      if (targetOrderNumber && !activeOrder && Array.isArray(data?.items)) {
         const found = data.items.find((o) => o.orderNumber === targetOrderNumber);
         if (found) setActiveOrder(found);
       }

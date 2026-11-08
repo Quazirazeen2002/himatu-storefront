@@ -61,8 +61,8 @@ export function PaymentManagement() {
         getAdminPaymentSummary(token).catch(() => null),
       ]);
 
-      setTransactions(txnData.items);
-      setTotal(txnData.total);
+      setTransactions(Array.isArray(txnData?.items) ? txnData.items : []);
+      setTotal(txnData?.total || 0);
       if (sumData) setSummary(sumData);
     } catch (err: any) {
       console.error("Failed to load payments:", err);
