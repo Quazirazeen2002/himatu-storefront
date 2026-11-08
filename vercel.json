@@ -4,3 +4,4 @@
   "buildCommand": "npm run build -w @himatu/shared && npm run build -w @himatu/web",
   "outputDirectory": "apps/web/.next"
 }
+

@@ -347,10 +347,20 @@ export function CustomerAccount() {
               <small>Manage catalogue figures, inventory stock, and Supabase image uploads.</small>
             </div>
           </div>
-          <Link href="/admin/products" className="account-admin-link">
-            <span>Product Management</span>
-            <ArrowRight size={14} />
-          </Link>
+          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <Link href="/admin" className="account-admin-link">
+              <span>Admin Dashboard</span>
+              <ArrowRight size={14} />
+            </Link>
+            <Link
+              href="/admin/products"
+              className="account-admin-link"
+              style={{ background: "transparent", border: "1px solid var(--border)" }}
+            >
+              <span>Product Management</span>
+              <ArrowRight size={14} />
+            </Link>
+          </div>
         </div>
       )}
 

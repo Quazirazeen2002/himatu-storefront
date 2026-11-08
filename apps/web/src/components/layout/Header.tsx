@@ -12,8 +12,10 @@ import {
   ArrowUpRight,
   ChevronDown,
   X,
+  ShieldCheck,
 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { authService, type CustomerSession } from "@/lib/auth-service";
 import { useStore } from "../commerce/StoreProvider";
 import { BagItems } from "../commerce/Commerce";
 import { catalogue, CONCEPT_LABEL } from "@/lib/catalogue";
@@ -26,6 +28,26 @@ export function Header() {
   const dialog = useRef<HTMLDialogElement>(null);
   const { query, setQuery } = store;
   const count = Object.values(store.bag).reduce((a, b) => a + b, 0);
+  const [session, setSession] = useState<CustomerSession | null>(null);
+
+  useEffect(() => {
+    authService
+      .getSession()
+      .then(setSession)
+      .catch(() => setSession(null));
+
+    const handleAuthChange = () => {
+      authService
+        .getSession()
+        .then(setSession)
+        .catch(() => setSession(null));
+    };
+
+    window.addEventListener("himatu:auth-change", handleAuthChange);
+    return () => {
+      window.removeEventListener("himatu:auth-change", handleAuthChange);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     const el = dialog.current;
@@ -77,6 +99,24 @@ export function Header() {
               )}
             </div>
           ))}
+          {session?.user?.role === "ADMIN" && (
+            <div className="nav-item">
+              <Link
+                href="/admin"
+                style={{
+                  color: "var(--accent, #e50914)",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  fontWeight: 700,
+                  letterSpacing: "0.06em",
+                }}
+              >
+                <ShieldCheck size={14} />
+                Admin Dashboard
+              </Link>
+            </div>
+          )}
         </nav>
         <div className="header-actions">
           <ThemeToggle />
@@ -165,6 +205,25 @@ export function Header() {
                   <ArrowUpRight size={20} />
                 </Link>
               ))}
+              {session?.user?.role === "ADMIN" && (
+                <Link
+                  onClick={() => store.setDrawer(null)}
+                  href="/admin"
+                  style={{
+                    color: "var(--accent, #e50914)",
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    <ShieldCheck size={18} />
+                    Admin Dashboard
+                  </span>
+                  <ArrowUpRight size={20} />
+                </Link>
+              )}
               <SessionLink />
             </nav>
           )}

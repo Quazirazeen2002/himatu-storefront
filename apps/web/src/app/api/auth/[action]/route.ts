@@ -213,7 +213,17 @@ export async function POST(
       jar.delete("himatu-recovery");
       jar.delete("himatu-pending-email");
       await synchronizeCustomerProfile(data.session.access_token);
-      const destination = sanitizeRedirectPath(value.next, "/");
+      let destination = sanitizeRedirectPath(value.next, "/");
+      if (!value.next || value.next === "/") {
+        const isAdmin =
+          data.user?.app_metadata?.role === "ADMIN" ||
+          data.user?.user_metadata?.role === "ADMIN" ||
+          data.user?.email === "razeenjubair10@gmail.com" ||
+          (process.env.ADMIN_EMAIL && data.user?.email === process.env.ADMIN_EMAIL);
+        if (isAdmin) {
+          destination = "/admin";
+        }
+      }
       return json({ ok: true, redirectTo: destination });
     }
 

@@ -193,18 +193,32 @@ export function ProfileMenu() {
           {/* Navigation Links */}
           <nav className="profile-flyout-nav">
             {session.user.role === "ADMIN" && (
-              <Link
-                href="/admin/products"
-                className="profile-flyout-link"
-                onClick={() => setIsOpen(false)}
-              >
-                <ShieldCheck size={16} />
-                <div className="profile-flyout-link-text">
-                  <strong style={{ color: "var(--accent)" }}>Product Management</strong>
-                  <small>Catalogue, inventory & storage</small>
-                </div>
-                <ArrowUpRight size={14} className="profile-flyout-arrow" />
-              </Link>
+              <>
+                <Link
+                  href="/admin"
+                  className="profile-flyout-link"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <ShieldCheck size={16} />
+                  <div className="profile-flyout-link-text">
+                    <strong style={{ color: "var(--accent)" }}>Admin Dashboard</strong>
+                    <small>Control center, analytics & sales</small>
+                  </div>
+                  <ArrowUpRight size={14} className="profile-flyout-arrow" />
+                </Link>
+                <Link
+                  href="/admin/products"
+                  className="profile-flyout-link"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Package size={16} />
+                  <div className="profile-flyout-link-text">
+                    <strong>Product Management</strong>
+                    <small>Catalogue, inventory & storage</small>
+                  </div>
+                  <ArrowUpRight size={14} className="profile-flyout-arrow" />
+                </Link>
+              </>
             )}
 
             <Link
