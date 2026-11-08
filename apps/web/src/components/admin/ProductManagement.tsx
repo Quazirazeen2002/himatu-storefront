@@ -17,9 +17,9 @@ import {
   CheckCircle2,
   AlertCircle,
   X,
-  Eye,
-  ShieldCheck,
   RefreshCw,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 import { authService, CustomerSession } from "@/lib/auth-service";
 import {
@@ -81,8 +81,43 @@ export function ProductManagement() {
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const formatBDT = (amount: number) =>
+    `৳${new Intl.NumberFormat("en-BD").format(amount)}`;
+
+  const showFeedback = (type: "success" | "error", text: string) => {
+    setFeedback({ type, text });
+    setTimeout(() => setFeedback(null), 4000);
+  };
+
+  const loadData = async (token: string) => {
+    try {
+      const [prodRes, catRes] = await Promise.all([
+        getAdminProducts(token, {
+          page,
+          limit: 15,
+          search: search.trim() || undefined,
+          category: categoryFilter || undefined,
+        }),
+        getCategories(),
+      ]);
+
+      setProducts(prodRes.items);
+      setTotalPages(prodRes.totalPages);
+      setTotalCount(prodRes.total);
+      setCategories(catRes);
+
+      if (managingImagesProduct) {
+        const refreshed = prodRes.items.find((p) => p.id === managingImagesProduct.id);
+        if (refreshed) setManagingImagesProduct(refreshed);
+      }
+    } catch (err: any) {
+      console.error("Failed to load products:", err);
+      showFeedback("error", err.message || "Failed to load product catalogue.");
+    }
+  };
+
   useEffect(() => {
-    async function loadAuth() {
+    async function init() {
       try {
         const s = await authService.getSession();
         setSession(s);
@@ -90,55 +125,32 @@ export function ProductManagement() {
           await loadData(s.accessToken);
         }
       } catch (err) {
-        console.error("Auth load error:", err);
+        console.error("Auth init error:", err);
       } finally {
         setLoading(false);
       }
     }
-    loadAuth();
-  }, []);
+    init();
+  }, [page, categoryFilter]);
 
-  async function loadData(token: string) {
-    try {
-      const [cats, prods] = await Promise.all([
-        getCategories(),
-        getAdminProducts(token, {
-          page,
-          search: search.trim() || undefined,
-          category: categoryFilter || undefined,
-        }),
-      ]);
-      setCategories(cats);
-      setProducts(prods.items);
-      setTotalPages(prods.totalPages);
-      setTotalCount(prods.total);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to load catalogue data");
-    }
-  }
-
-  function showFeedback(type: "success" | "error", text: string) {
-    setFeedback({ type, text });
-    setTimeout(() => setFeedback(null), 4000);
-  }
-
-  function handleSearchSubmit(e: React.FormEvent) {
+  const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (session?.accessToken) {
       setPage(1);
       loadData(session.accessToken);
     }
-  }
+  };
 
-  // Open Create Form
-  function openCreate() {
+  // Open Create Modal
+  const openCreate = () => {
+    setEditingProduct(null);
     setFormData({
       name: "",
       slug: "",
-      sku: `HMT-${Date.now().toString().slice(-6)}`,
+      sku: `HMT-${Date.now().toString().slice(-4)}`,
       shortDescription: "",
       description: "",
-      price: 5000,
+      price: 0,
       salePrice: 0,
       categoryId: categories[0]?.id || "",
       isActive: true,
@@ -149,34 +161,38 @@ export function ProductManagement() {
         Height: "24 cm",
         Material: "PVC & ABS",
         Series: "Anime Collectible",
+        Manufacturer: "Official",
       },
     });
-    setEditingProduct(null);
     setIsCreateModalOpen(true);
-  }
+  };
 
-  // Open Edit Form
-  function openEdit(prod: ProductDto) {
+  // Open Edit Modal
+  const openEdit = (product: ProductDto) => {
+    setEditingProduct(product);
     setFormData({
-      name: prod.name,
-      slug: prod.slug,
-      sku: prod.sku,
-      shortDescription: prod.shortDescription || "",
-      description: prod.description,
-      price: prod.price,
-      salePrice: prod.salePrice || 0,
-      categoryId: prod.categoryId,
-      isActive: prod.isActive,
-      isFeatured: prod.isFeatured,
-      initialStock: prod.inventory?.quantity || 0,
-      specifications: (prod.specifications as Record<string, string>) || {},
+      name: product.name,
+      slug: product.slug,
+      sku: product.sku,
+      shortDescription: product.shortDescription || "",
+      description: product.description,
+      price: product.price,
+      salePrice: product.salePrice || 0,
+      categoryId: product.categoryId,
+      isActive: product.isActive,
+      isFeatured: product.isFeatured,
+      initialStock: product.inventory?.quantity || 0,
+      specifications: (product.specifications as Record<string, string>) || {
+        Scale: "1/8 Scale",
+        Height: "24 cm",
+        Material: "PVC & ABS",
+      },
     });
-    setEditingProduct(prod);
     setIsCreateModalOpen(true);
-  }
+  };
 
-  // Submit Create or Edit Product
-  async function handleProductSubmit(e: React.FormEvent) {
+  // Submit Product Form
+  const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!session?.accessToken) return;
 
@@ -186,142 +202,130 @@ export function ProductManagement() {
           name: formData.name,
           slug: formData.slug,
           sku: formData.sku,
-          shortDescription: formData.shortDescription || null,
+          shortDescription: formData.shortDescription,
           description: formData.description,
-          price: Number(formData.price),
-          salePrice: Number(formData.salePrice) || null,
+          price: formData.price,
+          salePrice: formData.salePrice || undefined,
           categoryId: formData.categoryId,
           isActive: formData.isActive,
           isFeatured: formData.isFeatured,
           specifications: formData.specifications,
         });
-        showFeedback("success", `Updated ${formData.name}`);
+        showFeedback("success", `Updated product "${formData.name}" successfully.`);
       } else {
         await createAdminProduct(session.accessToken, {
           name: formData.name,
-          slug: formData.slug || formData.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+          slug: formData.slug,
           sku: formData.sku,
-          shortDescription: formData.shortDescription || null,
+          shortDescription: formData.shortDescription,
           description: formData.description,
-          price: Number(formData.price),
-          salePrice: Number(formData.salePrice) || null,
+          price: formData.price,
+          salePrice: formData.salePrice || undefined,
           categoryId: formData.categoryId,
           isActive: formData.isActive,
           isFeatured: formData.isFeatured,
-          initialStock: Number(formData.initialStock),
+          initialStock: formData.initialStock,
           specifications: formData.specifications,
         });
-        showFeedback("success", `Created ${formData.name}`);
+        showFeedback("success", `Created new collectible "${formData.name}".`);
       }
 
       setIsCreateModalOpen(false);
-      setEditingProduct(null);
       await loadData(session.accessToken);
     } catch (err: any) {
-      showFeedback("error", err.message || "Failed to save product");
+      showFeedback("error", err.message || "Failed to save product.");
     }
-  }
+  };
 
   // Archive Product
-  async function handleArchive(prod: ProductDto) {
+  const handleArchive = async (product: ProductDto) => {
     if (!session?.accessToken) return;
-    if (!confirm(`Archive product "${prod.name}"? It will no longer appear on the public storefront.`)) {
+    if (!confirm(`Archive "${product.name}"? It will no longer be visible on the public storefront.`)) {
       return;
     }
 
     try {
-      await archiveAdminProduct(session.accessToken, prod.id);
-      showFeedback("success", `Archived ${prod.name}`);
+      await archiveAdminProduct(session.accessToken, product.id);
+      showFeedback("success", `Archived "${product.name}".`);
       await loadData(session.accessToken);
     } catch (err: any) {
-      showFeedback("error", err.message || "Failed to archive product");
+      showFeedback("error", err.message || "Failed to archive product.");
     }
-  }
+  };
 
-  // Stock Adjustment
-  async function handleStockAdjust(e: React.FormEvent) {
+  // Adjust Stock
+  const handleStockAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.accessToken || !adjustingStockProduct) return;
+    if (!adjustingStockProduct || !session?.accessToken) return;
 
     try {
-      await adjustAdminInventory(session.accessToken, adjustingStockProduct.id, stockInput);
-      showFeedback("success", `Stock updated to ${stockInput} units`);
+      await adjustAdminInventory(
+        session.accessToken,
+        adjustingStockProduct.id,
+        stockInput,
+        adjustingStockProduct.inventory?.reservedQuantity || 0,
+      );
+      showFeedback("success", `Inventory updated for ${adjustingStockProduct.name} to ${stockInput} units.`);
       setAdjustingStockProduct(null);
       await loadData(session.accessToken);
     } catch (err: any) {
-      showFeedback("error", err.message || "Failed to adjust inventory");
+      showFeedback("error", err.message || "Failed to adjust inventory.");
     }
-  }
+  };
 
-  // Image Upload Handling (Multiple files, drag & drop)
-  async function handleFileUpload(files: FileList | null) {
+  // Upload Images
+  const handleFileUpload = async (files: FileList | null) => {
     if (!files || files.length === 0 || !managingImagesProduct || !session?.accessToken) return;
-
     setUploadingImages(true);
     setUploadError(null);
 
     try {
-      const data = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        data.append("files", files[i]);
-      }
-      data.append("altText", `${managingImagesProduct.name} collectible photograph`);
+      const fileArray = Array.from(files);
+      const fd = new FormData();
+      fileArray.forEach((file) => fd.append("images", file));
 
-      const uploaded = await uploadProductImages(session.accessToken, managingImagesProduct.id, data);
-      showFeedback("success", `Uploaded ${uploaded.length} image(s) to Supabase Storage`);
-
-      // Refresh product images
-      const refreshedList = await getAdminProducts(session.accessToken, { page });
-      setProducts(refreshedList.items);
-      const updatedProduct = refreshedList.items.find((p) => p.id === managingImagesProduct.id);
-      if (updatedProduct) {
-        setManagingImagesProduct(updatedProduct);
-      }
+      await uploadProductImages(session.accessToken, managingImagesProduct.id, fd);
+      showFeedback("success", `Uploaded ${fileArray.length} photograph(s) to Supabase Storage.`);
+      await loadData(session.accessToken);
     } catch (err: any) {
-      setUploadError(err.message || "Upload failed");
+      setUploadError(err.message || "Upload failed. Please check image format & size.");
+      showFeedback("error", err.message || "Upload failed");
     } finally {
       setUploadingImages(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
-  }
+  };
 
-  // Mark Image as Primary
-  async function handleSetPrimary(imageId: string) {
+  // Set Primary Image
+  const handleSetPrimary = async (imageId: string) => {
     if (!managingImagesProduct || !session?.accessToken) return;
-
     try {
       await updateProductImage(session.accessToken, managingImagesProduct.id, imageId, {
         isPrimary: true,
       });
-      showFeedback("success", "Primary cover image updated");
-      const refreshedList = await getAdminProducts(session.accessToken, { page });
-      setProducts(refreshedList.items);
-      const updatedProduct = refreshedList.items.find((p) => p.id === managingImagesProduct.id);
-      if (updatedProduct) setManagingImagesProduct(updatedProduct);
+      showFeedback("success", "Primary cover photograph updated.");
+      await loadData(session.accessToken);
     } catch (err: any) {
       showFeedback("error", err.message || "Failed to set primary image");
     }
-  }
+  };
 
   // Delete Image
-  async function handleDeleteImage(imageId: string) {
+  const handleDeleteImage = async (imageId: string) => {
     if (!managingImagesProduct || !session?.accessToken) return;
     if (!confirm("Delete this photograph from Supabase Storage and database?")) return;
 
     try {
       await deleteProductImage(session.accessToken, managingImagesProduct.id, imageId);
-      showFeedback("success", "Photograph deleted");
-      const refreshedList = await getAdminProducts(session.accessToken, { page });
-      setProducts(refreshedList.items);
-      const updatedProduct = refreshedList.items.find((p) => p.id === managingImagesProduct.id);
-      if (updatedProduct) setManagingImagesProduct(updatedProduct);
+      showFeedback("success", "Photograph deleted.");
+      await loadData(session.accessToken);
     } catch (err: any) {
       showFeedback("error", err.message || "Failed to delete photograph");
     }
-  }
+  };
 
   // Reorder Images
-  async function handleMoveImage(index: number, direction: "up" | "down") {
+  const handleMoveImage = async (index: number, direction: "up" | "down") => {
     if (!managingImagesProduct || !session?.accessToken) return;
     const images = [...managingImagesProduct.images];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
@@ -338,133 +342,239 @@ export function ProductManagement() {
 
     try {
       await reorderProductImages(session.accessToken, managingImagesProduct.id, items);
-      const refreshedList = await getAdminProducts(session.accessToken, { page });
-      setProducts(refreshedList.items);
-      const updatedProduct = refreshedList.items.find((p) => p.id === managingImagesProduct.id);
-      if (updatedProduct) setManagingImagesProduct(updatedProduct);
+      await loadData(session.accessToken);
     } catch (err: any) {
       showFeedback("error", err.message || "Failed to reorder images");
     }
-  }
+  };
 
   if (loading) {
-    return (
-      <div className="admin-loading-container">
-        <RefreshCw className="animate-spin" size={28} />
-        <p>Verifying administrative credentials...</p>
-      </div>
-    );
+    return <p style={{ padding: "40px", fontWeight: 700 }}>LOADING PRODUCT CATALOGUE…</p>;
   }
 
   if (!session || session.user.role !== "ADMIN") {
     return (
-      <div className="admin-forbidden-container">
-        <AlertCircle size={48} className="admin-alert-icon" />
-        <h2>RESTRICTED ACCESS</h2>
-        <p>This product management console requires verified administrator privileges.</p>
-        <p className="admin-user-info">
-          Signed in as: <strong>{session?.user.email || "Guest"}</strong> ({session?.user.role || "None"})
+      <div style={{ padding: "60px 20px", textAlign: "center" }}>
+        <AlertCircle size={48} style={{ color: "var(--admin-accent, #d92727)", margin: "0 auto 16px" }} />
+        <h2 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>RESTRICTED ACCESS</h2>
+        <p style={{ color: "var(--admin-muted)", marginBottom: "24px" }}>
+          This product management console requires verified administrator privileges.
         </p>
-        <Link href="/shop" className="button button-secondary">
+        <Link href="/shop" className="admin-btn admin-btn--secondary">
           Return to Storefront
         </Link>
       </div>
     );
   }
 
+  const activeCount = products.filter((p) => p.isActive).length;
+  const lowStockCount = products.filter((p) => (p.inventory?.quantity ?? 0) <= 5 && (p.inventory?.quantity ?? 0) > 0).length;
+  const outOfStockCount = products.filter((p) => (p.inventory?.quantity ?? 0) === 0).length;
+
   return (
-    <div className="admin-console-wrapper">
-      {/* Toast Feedback */}
+    <div>
+      {/* Page Header */}
+      <div className="admin-page-header">
+        <div className="admin-page-title-group">
+          <h1>Product Catalogue & Inventory</h1>
+          <p>Curate authentic anime figure catalogue, manage inventory, and upload high-resolution photographs.</p>
+        </div>
+        <div className="admin-page-actions">
+          <button type="button" className="admin-btn admin-btn--primary" onClick={openCreate}>
+            <Plus size={15} />
+            <span>+ Add Product</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Feedback Banner */}
       {feedback && (
-        <div className={`admin-toast ${feedback.type}`}>
+        <div
+          style={{
+            padding: "12px 18px",
+            borderRadius: "6px",
+            marginBottom: "20px",
+            fontSize: "13px",
+            fontWeight: 700,
+            background: feedback.type === "success" ? "var(--admin-success-soft)" : "rgba(217, 39, 39, 0.08)",
+            color: feedback.type === "success" ? "var(--admin-success)" : "var(--admin-accent)",
+            border: `1px solid ${feedback.type === "success" ? "var(--admin-success)" : "var(--admin-accent)"}`,
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+          }}
+        >
           {feedback.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
           <span>{feedback.text}</span>
         </div>
       )}
 
-      {/* Header */}
-      <div className="admin-header">
-        <div className="admin-title-area">
-          <div className="admin-badge">
-            <ShieldCheck size={14} />
-            <span>ADMINISTRATOR CONSOLE</span>
+      {/* KPI Summary Grid */}
+      <div className="admin-kpi-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "20px" }}>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-top">
+            <span className="admin-kpi-label">Total Catalogue</span>
+            <div className="admin-kpi-icon" style={{ color: "var(--admin-text)" }}>
+              <Package size={16} />
+            </div>
           </div>
-          <h1>PRODUCT MANAGEMENT.</h1>
-          <p>
-            Manage authentic figurine catalogue, inventory stock levels, and Supabase Storage photographs.
-          </p>
+          <div className="admin-kpi-value">{totalCount}</div>
+          <div className="admin-kpi-subtext">Curated figures & test items</div>
         </div>
 
-        <button onClick={openCreate} className="button admin-create-btn">
-          <Plus size={16} />
-          <span>NEW PRODUCT</span>
-        </button>
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-top">
+            <span className="admin-kpi-label">Active on Storefront</span>
+            <div className="admin-kpi-icon" style={{ color: "var(--admin-success)" }}>
+              <CheckCircle2 size={16} />
+            </div>
+          </div>
+          <div className="admin-kpi-value" style={{ color: "var(--admin-success)" }}>
+            {activeCount}
+          </div>
+          <div className="admin-kpi-subtext">Visible to collectors</div>
+        </div>
+
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-top">
+            <span className="admin-kpi-label">Low Stock (≤ 5)</span>
+            <div className="admin-kpi-icon" style={{ color: "#d97706" }}>
+              <Boxes size={16} />
+            </div>
+          </div>
+          <div className="admin-kpi-value" style={{ color: "#d97706" }}>
+            {lowStockCount}
+          </div>
+          <div className="admin-kpi-subtext">Replenishment recommended</div>
+        </div>
+
+        <div className="admin-kpi-card">
+          <div className="admin-kpi-top">
+            <span className="admin-kpi-label">Out of Stock</span>
+            <div className="admin-kpi-icon" style={{ color: "#ef4444" }}>
+              <AlertCircle size={16} />
+            </div>
+          </div>
+          <div className="admin-kpi-value" style={{ color: "#ef4444" }}>
+            {outOfStockCount}
+          </div>
+          <div className="admin-kpi-subtext">Available for pre-order or re-stock</div>
+        </div>
       </div>
 
-      {/* Filter / Search Bar */}
-      <div className="admin-toolbar">
-        <form onSubmit={handleSearchSubmit} className="admin-search-form">
-          <Search size={16} className="search-icon" />
-          <input
-            type="text"
-            placeholder="Search by title, character, or SKU..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="admin-search-input"
-          />
-          <button type="submit" className="button button-sm">
-            Search
-          </button>
-        </form>
-
-        <div className="admin-filters">
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setPage(1);
-              if (session?.accessToken) loadData(session.accessToken);
-            }}
-            className="admin-select"
-          >
-            <option value="">All Categories</option>
+      {/* Toolbar: Category Filter & Search Bar */}
+      <div className="admin-card" style={{ padding: "16px 20px", marginBottom: "16px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
+          {/* Categories Filter Tabs */}
+          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", alignItems: "center" }}>
+            <button
+              type="button"
+              onClick={() => {
+                setCategoryFilter("");
+                setPage(1);
+              }}
+              style={{
+                padding: "6px 14px",
+                borderRadius: "4px",
+                border: 0,
+                fontSize: "11px",
+                fontWeight: 800,
+                cursor: "pointer",
+                background: categoryFilter === "" ? "#111111" : "#f3f4f6",
+                color: categoryFilter === "" ? "#ffffff" : "var(--admin-muted)",
+                transition: "all 0.15s ease",
+              }}
+            >
+              All Categories
+            </button>
             {categories.map((c) => (
-              <option key={c.id} value={c.slug}>
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => {
+                  setCategoryFilter(c.slug);
+                  setPage(1);
+                }}
+                style={{
+                  padding: "6px 14px",
+                  borderRadius: "4px",
+                  border: 0,
+                  fontSize: "11px",
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  background: categoryFilter === c.slug ? "#111111" : "#f3f4f6",
+                  color: categoryFilter === c.slug ? "#ffffff" : "var(--admin-muted)",
+                  transition: "all 0.15s ease",
+                }}
+              >
                 {c.name}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
 
-          <button
-            onClick={() => session?.accessToken && loadData(session.accessToken)}
-            className="button button-secondary button-sm"
-            title="Refresh list"
-          >
-            <RefreshCw size={14} />
-          </button>
+          {/* Search Box & Refresh */}
+          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <form onSubmit={handleSearchSubmit} style={{ position: "relative", width: "260px" }}>
+              <input
+                type="search"
+                placeholder="Search title, SKU, character…"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  width: "100%",
+                  height: "36px",
+                  padding: "0 12px 0 34px",
+                  borderRadius: "4px",
+                  border: "1px solid var(--admin-border)",
+                  fontSize: "12px",
+                  background: "var(--admin-surface)",
+                  color: "var(--admin-text)",
+                }}
+              />
+              <Search
+                size={14}
+                style={{
+                  position: "absolute",
+                  left: "11px",
+                  top: "11px",
+                  color: "var(--admin-muted)",
+                }}
+              />
+            </form>
+
+            <button
+              type="button"
+              className="admin-btn admin-btn--secondary"
+              style={{ height: "36px", width: "36px", padding: 0 }}
+              onClick={() => session?.accessToken && loadData(session.accessToken)}
+              title="Refresh catalogue"
+            >
+              <RefreshCw size={14} />
+            </button>
+          </div>
         </div>
       </div>
 
       {/* Products Table */}
-      <div className="admin-table-card">
-        <div className="table-responsive">
+      <div className="admin-card">
+        <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
               <tr>
-                <th>ITEM</th>
+                <th>Item & Photography</th>
                 <th>SKU</th>
-                <th>CATEGORY</th>
-                <th>PRICE (BDT)</th>
-                <th>STOCK</th>
-                <th>STATUS</th>
-                <th className="text-right">ACTIONS</th>
+                <th>Category</th>
+                <th>Price (BDT)</th>
+                <th>Stock Level</th>
+                <th>Status</th>
+                <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {products.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="admin-empty-cell">
-                    No products found matching query.
+                  <td colSpan={7} style={{ textAlign: "center", padding: "40px", color: "var(--admin-muted)" }}>
+                    No anime collectibles found matching current filter.
                   </td>
                 </tr>
               ) : (
@@ -474,85 +584,162 @@ export function ProductManagement() {
                   const stock = prod.inventory?.availableQuantity ?? 0;
 
                   return (
-                    <tr key={prod.id} className={!prod.isActive ? "row-inactive" : ""}>
-                      <td className="product-cell">
-                        <div className="product-cell-thumb">
+                    <tr key={prod.id}>
+                      {/* Product Thumbnail + Name */}
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                           {primaryImage ? (
-                            <Image
+                            <img
                               src={primaryImage.imageUrl}
                               alt={primaryImage.altText || prod.name}
-                              width={48}
-                              height={48}
-                              className="thumb-img"
-                              unoptimized
+                              style={{
+                                width: "42px",
+                                height: "42px",
+                                objectFit: "cover",
+                                borderRadius: "4px",
+                                border: "1px solid var(--admin-border)",
+                                flexShrink: 0,
+                              }}
                             />
                           ) : (
-                            <div className="thumb-placeholder">
+                            <div
+                              style={{
+                                width: "42px",
+                                height: "42px",
+                                background: "#f3f4f6",
+                                borderRadius: "4px",
+                                border: "1px solid var(--admin-border)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                color: "var(--admin-muted)",
+                                flexShrink: 0,
+                              }}
+                            >
                               <Package size={20} />
                             </div>
                           )}
-                        </div>
-                        <div className="product-cell-meta">
-                          <Link href={`/products/${prod.slug}`} className="product-cell-name">
-                            {prod.name}
-                          </Link>
-                          {prod.isFeatured && <span className="featured-pill">FEATURED</span>}
+                          <div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                              <Link
+                                href={`/products/${prod.slug}`}
+                                style={{
+                                  fontWeight: 700,
+                                  color: "var(--admin-text)",
+                                  textDecoration: "none",
+                                }}
+                              >
+                                {prod.name}
+                              </Link>
+                              {prod.isFeatured && (
+                                <span className="admin-badge admin-badge--purple" style={{ fontSize: "9px", padding: "1px 6px" }}>
+                                  Featured
+                                </span>
+                              )}
+                            </div>
+                            {prod.shortDescription && (
+                              <p style={{ fontSize: "11px", color: "var(--admin-muted)", margin: "2px 0 0 0", maxWidth: "280px", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {prod.shortDescription}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </td>
-                      <td className="sku-cell">{prod.sku}</td>
+
+                      {/* SKU */}
+                      <td style={{ fontFamily: "var(--font-metadata, monospace)", fontSize: "12px", color: "var(--admin-muted)" }}>
+                        {prod.sku}
+                      </td>
+
+                      {/* Category */}
                       <td>
-                        <span className="category-pill">{prod.category?.name || "General"}</span>
+                        <span className="admin-badge admin-badge--gray">
+                          {prod.category?.name || "General"}
+                        </span>
                       </td>
-                      <td className="price-cell">
-                        <div className="price-stack">
-                          <span className="curr-price">৳{prod.price.toLocaleString()}</span>
-                          {prod.salePrice && (
-                            <span className="sale-price">৳{prod.salePrice.toLocaleString()}</span>
+
+                      {/* Price */}
+                      <td>
+                        <div style={{ display: "flex", flexDirection: "column" }}>
+                          <span style={{ fontWeight: 800, fontSize: "13px" }}>
+                            {formatBDT(prod.price)}
+                          </span>
+                          {prod.salePrice && prod.salePrice < prod.price && (
+                            <span style={{ fontSize: "11px", color: "var(--admin-muted)", textDecoration: "line-through" }}>
+                              {formatBDT(prod.salePrice)}
+                            </span>
                           )}
                         </div>
                       </td>
-                      <td className="stock-cell">
+
+                      {/* Stock Level */}
+                      <td>
                         <button
+                          type="button"
                           onClick={() => {
                             setAdjustingStockProduct(prod);
                             setStockInput(prod.inventory?.quantity ?? 0);
                           }}
-                          className={`stock-badge ${stock > 0 ? "in-stock" : "out-of-stock"}`}
-                          title="Click to adjust stock"
+                          style={{
+                            background: "transparent",
+                            border: 0,
+                            padding: 0,
+                            cursor: "pointer",
+                            textAlign: "left",
+                          }}
+                          title="Click to adjust inventory"
                         >
-                          <Boxes size={12} />
-                          <span>{stock} in stock</span>
+                          {stock === 0 ? (
+                            <span className="admin-badge admin-badge--red">Out of Stock</span>
+                          ) : stock <= 5 ? (
+                            <span className="admin-badge admin-badge--amber">Low Stock ({stock})</span>
+                          ) : (
+                            <span className="admin-badge admin-badge--green">{stock} in stock</span>
+                          )}
                         </button>
                       </td>
+
+                      {/* Status */}
                       <td>
-                        <span className={`status-pill ${prod.isActive ? "active" : "inactive"}`}>
-                          {prod.isActive ? "ACTIVE" : "ARCHIVED"}
+                        <span className={`admin-badge ${prod.isActive ? "admin-badge--green" : "admin-badge--gray"}`}>
+                          {prod.isActive ? "Active" : "Archived"}
                         </span>
                       </td>
-                      <td className="actions-cell text-right">
-                        <div className="action-buttons">
+
+                      {/* Actions */}
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "inline-flex", gap: "6px" }}>
                           <button
+                            type="button"
+                            className="admin-btn admin-btn--secondary"
+                            style={{ height: "30px", padding: "0 10px", fontSize: "11px" }}
                             onClick={() => setManagingImagesProduct(prod)}
-                            className="btn-action"
-                            title="Manage Supabase Photographs"
+                            title="Manage photographs"
                           >
-                            <Upload size={14} />
-                            <span>Images ({prod.images.length})</span>
+                            <Upload size={12} />
+                            <span>Photos ({prod.images.length})</span>
                           </button>
+
                           <button
+                            type="button"
+                            className="admin-btn admin-btn--secondary"
+                            style={{ height: "30px", padding: "0 10px", fontSize: "11px" }}
                             onClick={() => openEdit(prod)}
-                            className="btn-action"
                             title="Edit details"
                           >
-                            <Edit2 size={14} />
+                            <Edit2 size={12} />
+                            <span>Edit</span>
                           </button>
+
                           {prod.isActive && (
                             <button
+                              type="button"
+                              className="admin-btn admin-btn--danger"
+                              style={{ height: "30px", padding: "0 8px", fontSize: "11px" }}
                               onClick={() => handleArchive(prod)}
-                              className="btn-action btn-danger"
-                              title="Archive product"
+                              title="Archive figure"
                             >
-                              <Trash2 size={14} />
+                              <Trash2 size={12} />
                             </button>
                           )}
                         </div>
@@ -566,31 +753,45 @@ export function ProductManagement() {
         </div>
 
         {/* Pagination Bar */}
-        <div className="admin-pagination-bar">
-          <p className="admin-count-label">
-            Showing {products.length} of {totalCount} total products
-          </p>
-          <div className="pagination-controls">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderTop: "1px solid var(--admin-border)",
+            fontSize: "12px",
+            color: "var(--admin-muted)",
+          }}
+        >
+          <div>
+            Showing <strong>{products.length}</strong> of <strong>{totalCount}</strong> collectibles
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <button
+              type="button"
+              className="admin-btn admin-btn--secondary"
+              style={{ height: "30px", padding: "0 12px", fontSize: "11px" }}
               onClick={() => {
                 setPage((p) => Math.max(1, p - 1));
                 if (session?.accessToken) loadData(session.accessToken);
               }}
               disabled={page <= 1}
-              className="button button-secondary button-sm"
             >
               Previous
             </button>
-            <span className="page-indicator">
-              Page {page} of {totalPages}
+            <span style={{ fontWeight: 700, padding: "0 6px" }}>
+              Page {page} of {totalPages || 1}
             </span>
             <button
+              type="button"
+              className="admin-btn admin-btn--secondary"
+              style={{ height: "30px", padding: "0 12px", fontSize: "11px" }}
               onClick={() => {
                 setPage((p) => Math.min(totalPages, p + 1));
                 if (session?.accessToken) loadData(session.accessToken);
               }}
               disabled={page >= totalPages}
-              className="button button-secondary button-sm"
             >
               Next
             </button>
@@ -600,167 +801,204 @@ export function ProductManagement() {
 
       {/* CREATE / EDIT PRODUCT MODAL */}
       {isCreateModalOpen && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal-card">
-            <div className="modal-header">
-              <h2>{editingProduct ? "EDIT PRODUCT" : "NEW COLLECTIBLE STATUE"}</h2>
-              <button onClick={() => setIsCreateModalOpen(false)} className="modal-close-btn">
-                <X size={20} />
+        <div className="admin-modal-backdrop" onClick={() => setIsCreateModalOpen(false)}>
+          <div
+            className="admin-modal-card"
+            style={{ maxWidth: "680px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="admin-modal-header">
+              <h3>{editingProduct ? "Edit Collectible Figure" : "Add New Collectible Statue"}</h3>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                style={{ background: "transparent", border: 0, cursor: "pointer" }}
+              >
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleProductSubmit} className="admin-form">
-              <div className="form-grid-2">
-                <div className="field">
-                  <label>Product Name *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setFormData((prev) => ({
-                        ...prev,
-                        name,
-                        slug: prev.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-                      }));
-                    }}
-                    placeholder="e.g. Luffy · Gear Five"
-                  />
+            <form onSubmit={handleProductSubmit}>
+              <div className="admin-modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                <div style={{ display: "flex", gap: "16px" }}>
+                  <div style={{ flex: 2 }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                      Product Name *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.name}
+                      onChange={(e) => {
+                        const name = e.target.value;
+                        setFormData((prev) => ({
+                          ...prev,
+                          name,
+                          slug: prev.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+                        }));
+                      }}
+                      placeholder="e.g. Luffy · Gear Five"
+                      style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
+                    />
+                  </div>
+
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                      Unique SKU *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.sku}
+                      onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
+                      placeholder="e.g. HMT-OP-001"
+                      style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
+                    />
+                  </div>
                 </div>
 
-                <div className="field">
-                  <label>Unique SKU *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.sku}
-                    onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
-                    placeholder="e.g. HMT-OP-001"
-                  />
-                </div>
-              </div>
+                <div style={{ display: "flex", gap: "16px" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                      URL Slug *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.slug}
+                      onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                      placeholder="e.g. straw-hat-captain"
+                      style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
+                    />
+                  </div>
 
-              <div className="form-grid-2">
-                <div className="field">
-                  <label>URL Slug *</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="e.g. straw-hat-captain"
-                  />
-                </div>
-
-                <div className="field">
-                  <label>Category *</label>
-                  <select
-                    required
-                    value={formData.categoryId}
-                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                  >
-                    {categories.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="form-grid-3">
-                <div className="field">
-                  <label>Price in BDT *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formData.price || ""}
-                    onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
-                    placeholder="6500"
-                  />
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                      Anime Category *
+                    </label>
+                    <select
+                      required
+                      value={formData.categoryId}
+                      onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                      style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px", background: "var(--admin-surface)" }}
+                    >
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <div className="field">
-                  <label>Sale Price (Optional)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.salePrice || ""}
-                    onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
-                    placeholder="5900"
-                  />
-                </div>
+                <div style={{ display: "flex", gap: "16px" }}>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                      Price in BDT *
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={formData.price || ""}
+                      onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                      placeholder="6500"
+                      style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
+                    />
+                  </div>
 
-                {!editingProduct && (
-                  <div className="field">
-                    <label>Initial Stock *</label>
+                  <div style={{ flex: 1 }}>
+                    <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                      Sale Price (Optional)
+                    </label>
                     <input
                       type="number"
                       min="0"
-                      required
-                      value={formData.initialStock}
-                      onChange={(e) =>
-                        setFormData({ ...formData, initialStock: Number(e.target.value) })
-                      }
+                      value={formData.salePrice || ""}
+                      onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
+                      placeholder="5900"
+                      style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
                     />
                   </div>
-                )}
-              </div>
 
-              <div className="field">
-                <label>Short Description (Card Summary)</label>
-                <input
-                  type="text"
-                  maxLength={500}
-                  value={formData.shortDescription}
-                  onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
-                  placeholder="Luffy in Gear Five, seated with dynamic blue cloud effect pieces."
-                />
-              </div>
+                  {!editingProduct && (
+                    <div style={{ flex: 1 }}>
+                      <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                        Initial Stock *
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        required
+                        value={formData.initialStock}
+                        onChange={(e) =>
+                          setFormData({ ...formData, initialStock: Number(e.target.value) })
+                        }
+                        style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
+                      />
+                    </div>
+                  )}
+                </div>
 
-              <div className="field">
-                <label>Full Curated Description *</label>
-                <textarea
-                  required
-                  rows={4}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Describe material composition, sculpting highlights, collector provenance..."
-                />
-              </div>
-
-              <div className="admin-checkbox-row">
-                <label className="checkbox-wrap">
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                    Short Summary (Catalogue Card)
+                  </label>
                   <input
-                    type="checkbox"
-                    checked={formData.isActive}
-                    onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    type="text"
+                    maxLength={500}
+                    value={formData.shortDescription}
+                    onChange={(e) => setFormData({ ...formData, shortDescription: e.target.value })}
+                    placeholder="Luffy in Gear Five, seated with dynamic blue cloud effect pieces."
+                    style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px" }}
                   />
-                  <span>Active on Storefront</span>
-                </label>
+                </div>
 
-                <label className="checkbox-wrap">
-                  <input
-                    type="checkbox"
-                    checked={formData.isFeatured}
-                    onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                    Full Curated Description *
+                  </label>
+                  <textarea
+                    required
+                    rows={4}
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Describe material composition, sculpting highlights, collector provenance..."
+                    style={{ width: "100%", padding: "10px 12px", border: "1px solid var(--admin-border)", borderRadius: "4px", fontSize: "13px" }}
                   />
-                  <span>Featured Hero Selection</span>
-                </label>
+                </div>
+
+                <div style={{ display: "flex", gap: "24px", paddingTop: "4px" }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.isActive}
+                      onChange={(e) => setFormData({ ...formData, isActive: e.target.checked })}
+                    />
+                    <span>Active on Public Storefront</span>
+                  </label>
+
+                  <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
+                    <input
+                      type="checkbox"
+                      checked={formData.isFeatured}
+                      onChange={(e) => setFormData({ ...formData, isFeatured: e.target.checked })}
+                    />
+                    <span>Featured Hero Collection</span>
+                  </label>
+                </div>
               </div>
 
-              <div className="modal-actions">
+              <div className="admin-modal-footer">
                 <button
                   type="button"
                   onClick={() => setIsCreateModalOpen(false)}
-                  className="button button-secondary"
+                  className="admin-btn admin-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="button">
-                  {editingProduct ? "SAVE CHANGES" : "CREATE PRODUCT"}
+                <button type="submit" className="admin-btn admin-btn--primary">
+                  {editingProduct ? "Save Changes" : "Create Product"}
                 </button>
               </div>
             </form>
@@ -770,41 +1008,57 @@ export function ProductManagement() {
 
       {/* STOCK ADJUST MODAL */}
       {adjustingStockProduct && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal-card modal-sm">
-            <div className="modal-header">
-              <h2>INVENTORY ADJUSTMENT</h2>
-              <button onClick={() => setAdjustingStockProduct(null)} className="modal-close-btn">
-                <X size={20} />
+        <div className="admin-modal-backdrop" onClick={() => setAdjustingStockProduct(null)}>
+          <div
+            className="admin-modal-card"
+            style={{ maxWidth: "440px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="admin-modal-header">
+              <h3>Adjust Inventory Stock</h3>
+              <button
+                type="button"
+                onClick={() => setAdjustingStockProduct(null)}
+                style={{ background: "transparent", border: 0, cursor: "pointer" }}
+              >
+                <X size={18} />
               </button>
             </div>
-            <form onSubmit={handleStockAdjust} className="admin-form">
-              <p className="modal-subtitle">
-                Product: <strong>{adjustingStockProduct.name}</strong> ({adjustingStockProduct.sku})
-              </p>
-              <div className="field">
-                <label>Total Available Units *</label>
-                <input
-                  type="number"
-                  min="0"
-                  required
-                  value={stockInput}
-                  onChange={(e) => setStockInput(Number(e.target.value))}
-                />
-                <span className="field-hint">
-                  Reserved units for ongoing checkout: {adjustingStockProduct.inventory?.reservedQuantity || 0}
-                </span>
+
+            <form onSubmit={handleStockAdjust}>
+              <div className="admin-modal-body">
+                <p style={{ fontSize: "13px", color: "var(--admin-muted)", marginBottom: "16px" }}>
+                  Product: <strong style={{ color: "var(--admin-text)" }}>{adjustingStockProduct.name}</strong> ({adjustingStockProduct.sku})
+                </p>
+
+                <div>
+                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
+                    Total Available Physical Units *
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={stockInput}
+                    onChange={(e) => setStockInput(Number(e.target.value))}
+                    style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px", fontSize: "14px", fontWeight: 800 }}
+                  />
+                  <span style={{ display: "block", fontSize: "11px", color: "var(--admin-muted)", marginTop: "6px" }}>
+                    Reserved for active checkouts: {adjustingStockProduct.inventory?.reservedQuantity || 0} units
+                  </span>
+                </div>
               </div>
-              <div className="modal-actions">
+
+              <div className="admin-modal-footer">
                 <button
                   type="button"
                   onClick={() => setAdjustingStockProduct(null)}
-                  className="button button-secondary"
+                  className="admin-btn admin-btn--secondary"
                 >
                   Cancel
                 </button>
-                <button type="submit" className="button">
-                  CONFIRM STOCK
+                <button type="submit" className="admin-btn admin-btn--primary">
+                  Confirm Stock Update
                 </button>
               </div>
             </form>
@@ -814,129 +1068,199 @@ export function ProductManagement() {
 
       {/* SUPABASE STORAGE IMAGE UPLOAD & GALLERY MODAL */}
       {managingImagesProduct && (
-        <div className="admin-modal-overlay">
-          <div className="admin-modal-card modal-lg">
-            <div className="modal-header">
+        <div className="admin-modal-backdrop" onClick={() => setManagingImagesProduct(null)}>
+          <div
+            className="admin-modal-card"
+            style={{ maxWidth: "780px" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="admin-modal-header">
               <div>
-                <h2>SUPABASE PHOTOGRAPHS</h2>
-                <p className="modal-subtitle">
-                  Product: <strong>{managingImagesProduct.name}</strong> ({managingImagesProduct.sku})
+                <h3>Supabase Storage Photographs</h3>
+                <p style={{ fontSize: "12px", color: "var(--admin-muted)", margin: "4px 0 0 0" }}>
+                  Figure: <strong>{managingImagesProduct.name}</strong> ({managingImagesProduct.sku})
                 </p>
               </div>
-              <button onClick={() => setManagingImagesProduct(null)} className="modal-close-btn">
-                <X size={20} />
+              <button
+                type="button"
+                onClick={() => setManagingImagesProduct(null)}
+                style={{ background: "transparent", border: 0, cursor: "pointer" }}
+              >
+                <X size={18} />
               </button>
             </div>
 
-            {/* Drag & Drop Upload Zone */}
-            <div
-              className={`dropzone-box ${uploadingImages ? "uploading" : ""}`}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                handleFileUpload(e.dataTransfer.files);
-              }}
-              onClick={() => fileInputRef.current?.click()}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept="image/jpeg,image/png,image/webp"
-                style={{ display: "none" }}
-                onChange={(e) => handleFileUpload(e.target.files)}
-              />
-              <Upload size={32} className="dropzone-icon" />
-              <h3>DRAG & DROP PHOTOGRAPHS HERE</h3>
-              <p>Supports JPEG, PNG, WebP up to 10MB each. Uploads directly to Supabase Storage.</p>
-              {uploadingImages && (
-                <div className="upload-progress-pill">
-                  <RefreshCw className="animate-spin" size={14} />
-                  <span>Uploading to Supabase Storage bucket &apos;product-images&apos;...</span>
-                </div>
-              )}
-              {uploadError && <p className="upload-error-text">{uploadError}</p>}
-            </div>
+            <div className="admin-modal-body" style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+              {/* Drag & Drop Upload Zone */}
+              <div
+                style={{
+                  border: "2px dashed var(--admin-border)",
+                  borderRadius: "8px",
+                  padding: "28px",
+                  textAlign: "center",
+                  background: uploadingImages ? "var(--admin-bg)" : "var(--admin-surface)",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  handleFileUpload(e.dataTransfer.files);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: "none" }}
+                  onChange={(e) => handleFileUpload(e.target.files)}
+                />
+                <Upload size={30} style={{ color: "var(--admin-muted)", margin: "0 auto 10px" }} />
+                <h4 style={{ fontSize: "14px", fontWeight: 800, margin: "0 0 4px 0" }}>
+                  DRAG & DROP PHOTOGRAPHS HERE
+                </h4>
+                <p style={{ fontSize: "12px", color: "var(--admin-muted)", margin: 0 }}>
+                  Supports JPEG, PNG, WebP up to 10MB each. Uploads directly to Supabase bucket.
+                </p>
 
-            {/* Existing Images Gallery */}
-            <div className="image-management-gallery">
-              <h3>CATALOGUE PHOTOGRAPHS ({managingImagesProduct.images.length})</h3>
+                {uploadingImages && (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: "8px", marginTop: "12px", padding: "6px 12px", background: "#f3f4f6", borderRadius: "100px", fontSize: "11px", fontWeight: 700 }}>
+                    <RefreshCw className="animate-spin" size={13} />
+                    <span>Uploading photographs to Supabase Storage…</span>
+                  </div>
+                )}
+                {uploadError && (
+                  <p style={{ color: "var(--admin-accent)", fontSize: "12px", fontWeight: 700, marginTop: "10px" }}>
+                    {uploadError}
+                  </p>
+                )}
+              </div>
 
-              {managingImagesProduct.images.length === 0 ? (
-                <p className="no-images-text">No photographs uploaded yet for this figure.</p>
-              ) : (
-                <div className="admin-image-grid">
-                  {managingImagesProduct.images.map((img, idx) => (
-                    <div
-                      key={img.id}
-                      className={`admin-image-card ${img.isPrimary ? "is-primary-card" : ""}`}
-                    >
-                      <div className="admin-image-thumb">
-                        <Image
-                          src={img.imageUrl}
-                          alt={img.altText}
-                          width={200}
-                          height={200}
-                          className="gallery-thumb-img"
-                          unoptimized
-                        />
-                        {img.isPrimary && (
-                          <div className="primary-pill">
-                            <Star size={12} fill="#fff" />
-                            <span>PRIMARY</span>
-                          </div>
-                        )}
-                      </div>
+              {/* Gallery List */}
+              <div>
+                <h4 style={{ fontSize: "12px", fontWeight: 800, letterSpacing: "0.04em", color: "var(--admin-muted)", textTransform: "uppercase", marginBottom: "12px" }}>
+                  Current Photographs ({managingImagesProduct.images.length})
+                </h4>
 
-                      <div className="image-card-footer">
-                        <p className="image-order-tag">Order #{img.sortOrder + 1}</p>
-                        <div className="image-card-buttons">
-                          {!img.isPrimary && (
-                            <button
-                              onClick={() => handleSetPrimary(img.id)}
-                              className="btn-icon"
-                              title="Set as primary cover photograph"
+                {managingImagesProduct.images.length === 0 ? (
+                  <p style={{ fontSize: "13px", color: "var(--admin-muted)", textAlign: "center", padding: "20px 0" }}>
+                    No photographs uploaded yet for this figure.
+                  </p>
+                ) : (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                    {managingImagesProduct.images.map((img, idx) => (
+                      <div
+                        key={img.id}
+                        style={{
+                          border: img.isPrimary ? "2px solid var(--admin-accent, #d92727)" : "1px solid var(--admin-border)",
+                          borderRadius: "6px",
+                          overflow: "hidden",
+                          background: "var(--admin-surface)",
+                          position: "relative",
+                        }}
+                      >
+                        <div style={{ position: "relative", height: "160px", background: "#f9fafb" }}>
+                          <img
+                            src={img.imageUrl}
+                            alt={img.altText || "Photograph"}
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                          {img.isPrimary && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "8px",
+                                left: "8px",
+                                background: "var(--admin-accent, #d92727)",
+                                color: "#ffffff",
+                                fontSize: "10px",
+                                fontWeight: 800,
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "4px",
+                              }}
                             >
-                              <Star size={14} />
-                            </button>
+                              <Star size={10} fill="#ffffff" />
+                              <span>PRIMARY</span>
+                            </div>
                           )}
-                          <button
-                            onClick={() => handleMoveImage(idx, "up")}
-                            disabled={idx === 0}
-                            className="btn-icon"
-                            title="Move up"
-                          >
-                            <ArrowUp size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleMoveImage(idx, "down")}
-                            disabled={idx === managingImagesProduct.images.length - 1}
-                            className="btn-icon"
-                            title="Move down"
-                          >
-                            <ArrowDown size={14} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteImage(img.id)}
-                            className="btn-icon btn-danger"
-                            title="Delete photograph"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                        </div>
+
+                        <div
+                          style={{
+                            padding: "8px 10px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            borderTop: "1px solid var(--admin-border)",
+                            background: "var(--admin-surface)",
+                          }}
+                        >
+                          <span style={{ fontSize: "11px", fontWeight: 700, color: "var(--admin-muted)" }}>
+                            Order #{img.sortOrder + 1}
+                          </span>
+
+                          <div style={{ display: "flex", gap: "4px" }}>
+                            {!img.isPrimary && (
+                              <button
+                                type="button"
+                                onClick={() => handleSetPrimary(img.id)}
+                                className="admin-btn admin-btn--secondary"
+                                style={{ height: "26px", width: "26px", padding: 0 }}
+                                title="Set as primary"
+                              >
+                                <Star size={12} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(idx, "up")}
+                              disabled={idx === 0}
+                              className="admin-btn admin-btn--secondary"
+                              style={{ height: "26px", width: "26px", padding: 0 }}
+                              title="Move up"
+                            >
+                              <ArrowUp size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleMoveImage(idx, "down")}
+                              disabled={idx === managingImagesProduct.images.length - 1}
+                              className="admin-btn admin-btn--secondary"
+                              style={{ height: "26px", width: "26px", padding: 0 }}
+                              title="Move down"
+                            >
+                              <ArrowDown size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteImage(img.id)}
+                              className="admin-btn admin-btn--danger"
+                              style={{ height: "26px", width: "26px", padding: 0 }}
+                              title="Delete photograph"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
-            <div className="modal-actions">
+            <div className="admin-modal-footer">
               <button
+                type="button"
                 onClick={() => setManagingImagesProduct(null)}
-                className="button button-secondary"
+                className="admin-btn admin-btn--primary"
               >
-                Close
+                Done
               </button>
             </div>
           </div>
@@ -945,4 +1269,3 @@ export function ProductManagement() {
     </div>
   );
 }
-
