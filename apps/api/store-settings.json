@@ -1,0 +1,12 @@
+{
+  "storeName": "HIMATU Anime Collectibles",
+  "contactEmail": "concierge@himatu.com",
+  "contactPhone": "+880 1711-000000",
+  "businessAddress": "Banani Road 11, Dhaka 1213, Bangladesh",
+  "insideDhakaShipping": 80,
+  "outsideDhakaShipping": 150,
+  "freeShippingThreshold": 10000,
+  "lowStockThreshold": 5,
+  "currency": "BDT",
+  "operatingHours": "10:00 AM – 9:00 PM BST (Sat – Thu)"
+}

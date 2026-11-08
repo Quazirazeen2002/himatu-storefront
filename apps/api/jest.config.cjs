@@ -1,0 +1,1 @@
+module.exports={preset:'ts-jest',testEnvironment:'node',testMatch:['**/test/**/*.spec.ts'],transform:{'^.+\\.tsx?$':['ts-jest',{tsconfig:{module:'CommonJS',moduleResolution:'node',allowJs:true}}],'^.+\\.js$':'<rootDir>/test/esm-transform.cjs'},moduleNameMapper:{'^(\\.{1,2}/.*)\\.js$':'$1'},transformIgnorePatterns:['node_modules/(?!jose/|@nestjs/)']};

@@ -1,0 +1,190 @@
+import "server-only";
+import { allowedAuthOrigin } from "./auth-origin";
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+export const authConfigured = () =>
+  !!(process.env.SUPABASE_URL && process.env.SUPABASE_PUBLISHABLE_KEY);
+function trustedOrigin(origin: string | null, host: string | null) {
+  return allowedAuthOrigin({
+    origin,
+    host,
+    configuredOrigin: new URL(process.env.APP_URL || "http://localhost:3000")
+      .origin,
+    additionalOrigins: (process.env.AUTH_ALLOWED_ORIGINS || "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean),
+    allowLocal: process.env.AUTH_ALLOW_LOCAL_ORIGINS === "true",
+  });
+}
+export function appOrigin(request?: NextRequest) {
+  const configured = new URL(process.env.APP_URL || "http://localhost:3000")
+    .origin;
+  if (request) {
+    const candidate = request.headers.get("origin") || request.nextUrl.origin;
+    if (trustedOrigin(candidate, request.headers.get("host"))) return candidate;
+  }
+  return configured;
+}
+export function csrfAllowed(request: NextRequest) {
+  return (
+    request.headers.get("x-himatu-request") === "1" &&
+    trustedOrigin(request.headers.get("origin"), request.headers.get("host"))
+  );
+}
+export const unavailable = () =>
+  NextResponse.json(
+    {
+      ok: false,
+      code: "not_connected",
+      message:
+        "Account services are not configured yet. Please try again later.",
+    },
+    { status: 503 },
+  );
+export async function serverAuth() {
+  const jar = await cookies();
+  const remember = jar.get("himatu-remember")?.value === "1";
+  return createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_PUBLISHABLE_KEY!,
+    {
+      cookieOptions: {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+      },
+      cookies: {
+        getAll: () => jar.getAll(),
+        setAll: (changes) => {
+          for (const { name, value, options } of changes)
+            jar.set(name, value, {
+              ...options,
+              httpOnly: true,
+              secure: process.env.NODE_ENV === "production",
+              sameSite: "lax",
+              path: "/",
+              ...(value
+                ? remember
+                  ? { maxAge: 60 * 60 * 24 * 30 }
+                  : { maxAge: undefined, expires: undefined }
+                : {}),
+            });
+        },
+      },
+      auth: {
+        flowType: "pkce",
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    },
+  );
+}
+export async function synchronizeCustomerProfile(accessToken: string) {
+  if (!process.env.API_URL || !accessToken) return null;
+  try {
+    const response = await fetch(`${process.env.API_URL}/api/v1/users/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return null;
+    return await response.json();
+  } catch {
+    return null;
+  }
+}
+export async function currentProfile() {
+  if (!authConfigured())
+    return {
+      status: 503,
+      body: {
+        ok: false,
+        code: "not_connected",
+        message: "Account services are not configured yet.",
+      },
+    };
+  const jar = await cookies();
+  if (jar.get("himatu-recovery")?.value === "1")
+    return {
+      status: 401,
+      body: {
+        ok: false,
+        code: "recovery_in_progress",
+        message: "Finish updating your password before accessing your account.",
+      },
+    };
+  const supabase = await serverAuth();
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+  if (error || !user)
+    return {
+      status: 401,
+      body: {
+        ok: false,
+        code: "signed_out",
+        message: "Please sign in to continue.",
+      },
+    };
+  if (!user.email_confirmed_at)
+    return {
+      status: 403,
+      body: {
+        ok: false,
+        code: "email_not_confirmed",
+        email: user.email,
+        redirectTo: `/verify-email${user.email ? `?email=${encodeURIComponent(user.email)}` : ""}`,
+        message: "Verify your email address to access your account.",
+      },
+    };
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session)
+    return {
+      status: 401,
+      body: {
+        ok: false,
+        code: "signed_out",
+        message: "Your session has expired.",
+      },
+    };
+  if (!process.env.API_URL)
+    return {
+      status: 503,
+      body: {
+        ok: false,
+        code: "api_unavailable",
+        message: "Profile services are not configured.",
+      },
+    };
+  const response = await fetch(`${process.env.API_URL}/api/v1/users/me`, {
+    headers: { Authorization: `Bearer ${session.access_token}` },
+    cache: "no-store",
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok)
+    return {
+      status: response.status === 401 ? 401 : 503,
+      body: {
+        ok: false,
+        code: "profile_unavailable",
+        message:
+          response.status === 401
+            ? "Please sign in again."
+            : "Your profile is temporarily unavailable.",
+      },
+    };
+  return {
+    status: 200,
+    body: {
+      ok: true,
+      user: await response.json(),
+      accessToken: session.access_token,
+    },
+  };
+}

@@ -1,0 +1,437 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  COD
+  BKASH
+  NAGAD
+  CARD
+}
+
+model UserProfile {
+  id               String               @id @default(uuid()) @db.Uuid
+  supabaseUserId   String               @unique @db.Uuid
+  fullName         String               @db.VarChar(120)
+  email            String               @db.VarChar(254)
+  phone            String?              @db.VarChar(20)
+  role             Role                 @default(CUSTOMER)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  addresses        Address[]
+  cart             Cart?
+  wishlist         Wishlist?
+  orders           Order[]
+  transactions     PaymentTransaction[]
+  printingRequests PrintingRequest[]
+}
+
+model Address {
+  id            String      @id @default(uuid()) @db.Uuid
+  userId        String      @db.Uuid
+  user          UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  recipientName String      @db.VarChar(120)
+  phone         String      @db.VarChar(20)
+  district      String      @db.VarChar(100)
+  area          String      @db.VarChar(150)
+  fullAddress   String      @db.VarChar(500)
+  postalCode    String?     @db.VarChar(20)
+  label         String      @default("HOME") @db.VarChar(50)
+  isDefault     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId])
+}
+
+model Category {
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String    @db.VarChar(120)
+  slug         String    @unique @db.VarChar(160)
+  description  String?
+  imageUrl     String?
+  isActive     Boolean   @default(true)
+  displayOrder Int       @default(0)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  products     Product[]
+
+  @@index([isActive, displayOrder])
+}
+
+model Product {
+  id               String         @id @default(uuid()) @db.Uuid
+  name             String         @db.VarChar(200)
+  slug             String         @unique @db.VarChar(220)
+  sku              String         @unique @db.VarChar(100)
+  shortDescription String?        @db.VarChar(500)
+  description      String
+  price            Int
+  salePrice        Int?
+  currency         String         @default("BDT") @db.Char(3)
+  categoryId       String         @db.Uuid
+  category         Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  specifications   Json?
+  isActive         Boolean        @default(true)
+  isFeatured       Boolean        @default(false)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  images           ProductImage[]
+  inventory        Inventory?
+  cartItems        CartItem[]
+  wishlistItems    WishlistItem[]
+  orderItems       OrderItem[]
+
+  @@index([categoryId, isActive])
+  @@index([isFeatured, isActive])
+}
+
+model ProductImage {
+  id          String   @id @default(uuid()) @db.Uuid
+  productId   String   @db.Uuid
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  storagePath String?
+  imageUrl    String
+  altText     String   @db.VarChar(500)
+  sortOrder   Int      @default(0)
+  isPrimary   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([productId, sortOrder])
+}
+
+model Inventory {
+  id               String   @id @default(uuid()) @db.Uuid
+  productId        String   @unique @db.Uuid
+  product          Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity         Int      @default(0)
+  reservedQuantity Int      @default(0)
+  updatedAt        DateTime @updatedAt
+}
+
+model Cart {
+  id        String      @id @default(uuid()) @db.Uuid
+  userId    String      @unique @db.Uuid
+  user      UserProfile @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  items     CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  cartId    String   @db.Uuid
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int      @default(1)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([cartId, productId])
+  @@index([cartId])
+}
+
+model Wishlist {
+  id        String         @id @default(uuid()) @db.Uuid
+  userId    String         @unique @db.Uuid
+  user      UserProfile    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  items     WishlistItem[]
+}
+
+model WishlistItem {
+  id         String   @id @default(uuid()) @db.Uuid
+  wishlistId String   @db.Uuid
+  wishlist   Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  productId  String   @db.Uuid
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([wishlistId, productId])
+  @@index([wishlistId])
+}
+
+model Order {
+  id                 String               @id @default(uuid()) @db.Uuid
+  orderNumber        String               @unique @db.VarChar(50)
+  userId             String               @db.Uuid
+  user               UserProfile          @relation(fields: [userId], references: [id], onDelete: Restrict)
+  addressSnapshot    Json
+  subtotal           Int
+  shippingCharge     Int
+  discountAmount     Int                  @default(0)
+  totalAmount        Int
+  currency           String               @default("BDT") @db.Char(3)
+  orderStatus        OrderStatus          @default(PENDING)
+  paymentStatus      PaymentStatus        @default(PENDING)
+  paymentMethod      PaymentMethod        @default(COD)
+  customerNotes      String?
+  cancelReason       String?
+  cancelledAt        DateTime?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  items              OrderItem[]
+  transactions       PaymentTransaction[]
+  refunds            Refund[]
+  printingProduction PrintingProduction?
+
+  @@index([userId, createdAt])
+  @@index([orderNumber])
+}
+
+model OrderItem {
+  id           String   @id @default(uuid()) @db.Uuid
+  orderId      String   @db.Uuid
+  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId    String?  @db.Uuid
+  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productName  String   @db.VarChar(200)
+  sku          String   @db.VarChar(100)
+  productImage String?
+  unitPrice    Int
+  quantity     Int
+  lineTotal    Int
+  createdAt    DateTime @default(now())
+
+  @@index([orderId])
+}
+
+model AnalyticsEvent {
+  id         String   @id @default(uuid()) @db.Uuid
+  eventName  String   @db.VarChar(100)
+  sessionId  String   @db.VarChar(128)
+  userId     String?  @db.Uuid
+  productId  String?  @db.Uuid
+  categoryId String?  @db.Uuid
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  @@index([eventName, createdAt])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([productId])
+  @@index([categoryId])
+}
+
+model AnalyticsInsight {
+  id                String   @id @default(uuid()) @db.Uuid
+  title             String   @db.VarChar(200)
+  category          String   @db.VarChar(50)
+  summary           String
+  evidence          Json
+  recommendedAction String
+  destination       String   @db.VarChar(200)
+  source            String   @default("rule-based") @db.VarChar(50)
+  confidence        String   @default("high") @db.VarChar(20)
+  reportingPeriod   String   @default("last_30_days") @db.VarChar(50)
+  createdAt         DateTime @default(now())
+
+  @@index([category, createdAt])
+}
+
+model PaymentTransaction {
+  id                    String         @id @default(uuid()) @db.Uuid
+  transactionRef        String         @unique @db.VarChar(64)
+  orderId               String?        @db.Uuid
+  order                 Order?         @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  userId                String?        @db.Uuid
+  user                  UserProfile?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  provider              String         @db.VarChar(32)
+  paymentMethod         PaymentMethod  @default(COD)
+  providerTransactionId String?        @db.VarChar(128)
+  providerSessionId     String?        @db.VarChar(128)
+  providerReference     String?        @db.VarChar(128)
+  amount                Int
+  currency              String         @default("BDT") @db.Char(3)
+  status                PaymentStatus  @default(PENDING)
+  verificationStatus    String         @default("UNVERIFIED") @db.VarChar(32)
+  paymentDetails        Json?
+  initiatedAt           DateTime       @default(now())
+  completedAt           DateTime?
+  failedAt              DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  events                PaymentEvent[]
+  refunds               Refund[]
+
+  @@index([orderId])
+  @@index([userId])
+  @@index([provider, status])
+  @@index([providerTransactionId])
+}
+
+model PaymentEvent {
+  id                 String             @id @default(uuid()) @db.Uuid
+  transactionId      String             @db.Uuid
+  transaction        PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  eventType          String             @db.VarChar(64)
+  provider           String             @db.VarChar(32)
+  providerEventRef   String?            @db.VarChar(128)
+  status             String             @db.VarChar(32)
+  verificationResult String?            @db.VarChar(64)
+  metadata           Json?
+  createdAt          DateTime           @default(now())
+
+  @@index([transactionId])
+  @@index([eventType])
+}
+
+model Refund {
+  id                String             @id @default(uuid()) @db.Uuid
+  refundRef         String             @unique @db.VarChar(64)
+  transactionId     String             @db.Uuid
+  transaction       PaymentTransaction @relation(fields: [transactionId], references: [id], onDelete: Restrict)
+  orderId           String?            @db.Uuid
+  order             Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  amount            Int
+  currency          String             @default("BDT") @db.Char(3)
+  reason            String             @db.VarChar(500)
+  providerRefundRef String?            @db.VarChar(128)
+  status            String             @default("PENDING") @db.VarChar(32)
+  initiatedBy       String?            @db.VarChar(120)
+  createdAt         DateTime           @default(now())
+  completedAt       DateTime?
+
+  @@index([transactionId])
+  @@index([orderId])
+}
+
+model PrintingRequest {
+  id                   String                   @id @default(uuid()) @db.Uuid
+  requestNumber        String                   @unique @db.VarChar(50)
+  userId               String?                  @db.Uuid
+  user                 UserProfile?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+  customerName         String                   @db.VarChar(120)
+  customerEmail        String                   @db.VarChar(254)
+  customerPhone        String                   @db.VarChar(20)
+  title                String                   @db.VarChar(200)
+  animeName            String                   @db.VarChar(150)
+  characterName        String                   @db.VarChar(150)
+  description          String
+  posePreference       String?                  @db.VarChar(200)
+  sizePreference       String?                  @db.VarChar(100)
+  materialPreference   String?                  @db.VarChar(100)
+  finishPreference     String?                  @db.VarChar(100)
+  colorPreference      String?                  @db.VarChar(200)
+  budgetEstimate       Int?
+  deadlineDate         DateTime?
+  customizationDetails Json?
+  status               String                   @default("SUBMITTED") @db.VarChar(50)
+  internalNotes        String?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  images               PrintingReferenceImage[]
+  quotations           PrintingQuotation[]
+  production           PrintingProduction?
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model PrintingReferenceImage {
+  id          String          @id @default(uuid()) @db.Uuid
+  requestId   String          @db.Uuid
+  request     PrintingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  storagePath String
+  fileName    String          @db.VarChar(255)
+  fileType    String          @db.VarChar(100)
+  fileSize    Int
+  description String?         @db.VarChar(255)
+  createdAt   DateTime        @default(now())
+
+  @@index([requestId])
+}
+
+model PrintingQuotation {
+  id                String          @id @default(uuid()) @db.Uuid
+  requestId         String          @db.Uuid
+  request           PrintingRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  quotationNumber   String          @unique @db.VarChar(50)
+  baseCost          Int             @default(0)
+  materialCost      Int             @default(0)
+  printingCost      Int             @default(0)
+  finishingCost     Int             @default(0)
+  paintingCost      Int             @default(0)
+  customizationCost Int             @default(0)
+  shippingCost      Int             @default(0)
+  discountAmount    Int             @default(0)
+  totalAmount       Int
+  currency          String          @default("BDT") @db.Char(3)
+  depositPercent    Int             @default(50)
+  depositAmount     Int
+  productionDays    Int             @default(14)
+  termsAndNotes     String?
+  validUntil        DateTime
+  status            String          @default("PENDING") @db.VarChar(32)
+  acceptedAt        DateTime?
+  rejectedAt        DateTime?
+  rejectionReason   String?
+  createdBy         String?         @db.VarChar(120)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  orderId           String?         @db.Uuid
+
+  @@index([requestId])
+  @@index([status])
+}
+
+model PrintingProduction {
+  id                   String            @id @default(uuid()) @db.Uuid
+  requestId            String            @unique @db.Uuid
+  request              PrintingRequest   @relation(fields: [requestId], references: [id], onDelete: Restrict)
+  orderId              String?           @unique @db.Uuid
+  order                Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  stage                String            @default("3D_MODELING") @db.VarChar(50)
+  targetCompletionDate DateTime?
+  actualCompletionDate DateTime?
+  assignedTechnician   String?           @db.VarChar(120)
+  notes                String?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  updates              ProductionUpdate[]
+
+  @@index([stage])
+}
+
+model ProductionUpdate {
+  id               String             @id @default(uuid()) @db.Uuid
+  productionId     String             @db.Uuid
+  production       PrintingProduction @relation(fields: [productionId], references: [id], onDelete: Cascade)
+  stage            String             @db.VarChar(50)
+  customerMessage  String
+  internalNote     String?
+  progressImageUrl String?
+  createdBy        String?            @db.VarChar(120)
+  createdAt        DateTime           @default(now())
+
+  @@index([productionId])
+}

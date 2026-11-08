@@ -1,0 +1,42 @@
+:root {
+  color-scheme: dark;
+  --background: #000000;
+  --surface: #0a0a0a;
+  --elevated: #111111;
+  --foreground: #ffffff;
+  --secondary: #a0a0a0;
+  --muted: #737373;
+  --border: #262626;
+  --accent: #d92727;
+  --button-background: #ffffff;
+  --button-text: #000000;
+  --button-hover: #ededed;
+  --soft: var(--surface);
+  --control-border: var(--muted);
+  --font-ui: var(--font-inter), Arial, sans-serif;
+  --font-editorial: var(--font-barlow), Impact, sans-serif;
+  --font-metadata: var(--font-geist-mono), monospace;
+  --page-margin: 40px;
+  --content-width: 1440px;
+  --section-space: 78px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+  --space-16: 64px;
+}
+@media (max-width: 1100px) {
+  :root {
+    --page-margin: 30px;
+    --section-space: 65px;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    --page-margin: 20px;
+    --section-space: 50px;
+  }
+}

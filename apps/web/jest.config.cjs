@@ -1,0 +1,1 @@
+module.exports={preset:'ts-jest',testEnvironment:'node',testMatch:['**/test/**/*.spec.ts'],transform:{'^.+\\.tsx?$':['ts-jest',{tsconfig:{module:'CommonJS',moduleResolution:'node',jsx:'react-jsx',esModuleInterop:true}}]},moduleNameMapper:{'^@/(.*)$':'<rootDir>/src/$1'}};

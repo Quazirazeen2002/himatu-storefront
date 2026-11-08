@@ -1,0 +1,15 @@
+{
+  "buildCommand": "npm run build -w @himatu/shared && npm run build -w @himatu/api",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30,
+      "includeFiles": "{dist/**,certs/**}"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/api"
+    }
+  ]
+}
