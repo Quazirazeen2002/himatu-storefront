@@ -20,10 +20,11 @@ interface CollectionPerformanceProps {
 export function CollectionPerformance({ data, currency = "৳" }: CollectionPerformanceProps) {
   const [sortMetric, setSortMetric] = useState<"revenue" | "unitsSold" | "orderCount">("revenue");
 
-  const { collections, leaderboard } = data;
+  const collections = Array.isArray(data?.collections) ? data.collections : [];
+  const leaderboard = Array.isArray(data?.leaderboard) ? data.leaderboard : [];
 
-  const sortedLeaderboard = [...leaderboard].sort((a, b) => b[sortMetric] - a[sortMetric]);
-  const maxRevenue = Math.max(...collections.map((c) => c.revenue), 1000);
+  const sortedLeaderboard = [...leaderboard].sort((a, b) => (b[sortMetric] || 0) - (a[sortMetric] || 0));
+  const maxRevenue = Math.max(...collections.map((c) => c.revenue || 0), 1000);
 
   return (
     <div className="space-y-6">

@@ -21,14 +21,22 @@ interface ProductLeaderboardProps {
 export function ProductLeaderboard({ data, currency = "৳" }: ProductLeaderboardProps) {
   const [activeTab, setActiveTab] = useState<"bestSelling" | "topRevenue" | "mostWishlisted">("bestSelling");
 
-  const { bestSelling, topRevenue, mostWishlisted } = data;
+  const {
+    bestSelling = [],
+    topRevenue = [],
+    mostWishlisted = [],
+  } = data || {};
+
+  const safeBestSelling = Array.isArray(bestSelling) ? bestSelling : [];
+  const safeTopRevenue = Array.isArray(topRevenue) ? topRevenue : [];
+  const safeMostWishlisted = Array.isArray(mostWishlisted) ? mostWishlisted : [];
 
   const currentList =
     activeTab === "bestSelling"
-      ? bestSelling
+      ? safeBestSelling
       : activeTab === "topRevenue"
-      ? topRevenue
-      : mostWishlisted;
+      ? safeTopRevenue
+      : safeMostWishlisted;
 
   return (
     <div className="rounded-xl border border-neutral-200/80 bg-white p-6 shadow-sm space-y-5">

@@ -19,15 +19,18 @@ interface CustomerInsightsProps {
 
 export function CustomerInsights({ data, currency = "৳" }: CustomerInsightsProps) {
   const {
-    totalRegistered,
-    newCustomersInPeriod,
-    returningCustomersInPeriod,
-    purchasingCustomersCount,
-    repeatPurchaseRate,
-    ordersPerCustomerAvg,
-    districts,
-    recentActivity,
-  } = data;
+    totalRegistered = 0,
+    newCustomersInPeriod = 0,
+    returningCustomersInPeriod = 0,
+    purchasingCustomersCount = 0,
+    repeatPurchaseRate = 0,
+    ordersPerCustomerAvg = 0,
+    districts = [],
+    recentActivity = [],
+  } = data || {};
+
+  const safeDistricts = Array.isArray(districts) ? districts : [];
+  const safeRecentActivity = Array.isArray(recentActivity) ? recentActivity : [];
 
   return (
     <div className="space-y-6">
@@ -114,8 +117,8 @@ export function CustomerInsights({ data, currency = "৳" }: CustomerInsightsPro
           </div>
 
           <div className="space-y-3">
-            {districts.length > 0 ? (
-              districts.map((d) => (
+            {safeDistricts.length > 0 ? (
+              safeDistricts.map((d) => (
                 <div key={d.district} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-bold text-neutral-800">{d.district}</span>
@@ -160,8 +163,8 @@ export function CustomerInsights({ data, currency = "৳" }: CustomerInsightsPro
             </div>
 
             <div className="space-y-3">
-              {recentActivity.length > 0 ? (
-                recentActivity.slice(0, 5).map((act) => (
+              {safeRecentActivity.length > 0 ? (
+                safeRecentActivity.slice(0, 5).map((act) => (
                   <div
                     key={act.id}
                     className="rounded-lg border border-neutral-100 p-2.5 text-xs transition hover:bg-neutral-50"

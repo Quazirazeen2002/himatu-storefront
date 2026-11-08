@@ -18,16 +18,20 @@ interface InventoryHealthProps {
 
 export function InventoryHealth({ data }: InventoryHealthProps) {
   const {
-    totalActiveProducts,
-    inStockCount,
-    lowStockCount,
-    outOfStockCount,
-    totalAvailableUnits,
-    totalReservedUnits,
-    categoryDistribution,
-    lowStockAlerts,
-    recommendations,
-  } = data;
+    totalActiveProducts = 0,
+    inStockCount = 0,
+    lowStockCount = 0,
+    outOfStockCount = 0,
+    totalAvailableUnits = 0,
+    totalReservedUnits = 0,
+    categoryDistribution = [],
+    lowStockAlerts = [],
+    recommendations = [],
+  } = data || {};
+
+  const safeCategoryDistribution = Array.isArray(categoryDistribution) ? categoryDistribution : [];
+  const safeLowStockAlerts = Array.isArray(lowStockAlerts) ? lowStockAlerts : [];
+  const safeRecommendations = Array.isArray(recommendations) ? recommendations : [];
 
   const totalCatalogUnits = totalAvailableUnits + totalReservedUnits;
 
@@ -113,7 +117,7 @@ export function InventoryHealth({ data }: InventoryHealthProps) {
           </div>
 
           <div className="overflow-x-auto">
-            {lowStockAlerts.length > 0 ? (
+            {safeLowStockAlerts.length > 0 ? (
               <table className="w-full text-left text-xs">
                 <thead>
                   <tr className="border-b border-neutral-100 text-[10px] font-bold uppercase tracking-wider text-neutral-400">
@@ -125,7 +129,7 @@ export function InventoryHealth({ data }: InventoryHealthProps) {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
-                  {lowStockAlerts.map((item) => (
+                  {safeLowStockAlerts.map((item) => (
                     <tr key={item.productId} className="hover:bg-neutral-50/50">
                       <td className="py-3">
                         <div className="flex items-center gap-2.5">
@@ -190,7 +194,7 @@ export function InventoryHealth({ data }: InventoryHealthProps) {
               Physical Stock by Collection
             </h3>
             <div className="space-y-3">
-              {categoryDistribution.map((cat) => (
+              {safeCategoryDistribution.map((cat) => (
                 <div key={cat.categoryId} className="space-y-1">
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-semibold text-neutral-800">{cat.categoryName}</span>
@@ -221,7 +225,7 @@ export function InventoryHealth({ data }: InventoryHealthProps) {
               Automated Inventory Rules
             </h4>
             <div className="space-y-2">
-              {recommendations.slice(0, 2).map((rec, i) => (
+              {safeRecommendations.slice(0, 2).map((rec, i) => (
                 <div
                   key={i}
                   className={`rounded-lg p-2.5 text-xs ${

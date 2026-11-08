@@ -21,7 +21,8 @@ interface AIInsightsPanelProps {
 }
 
 export function AIInsightsPanel({ insights, onRegenerate, isGenerating }: AIInsightsPanelProps) {
-  const isRuleBased = insights.some((i) => i.source === "rule-based");
+  const safeInsights = Array.isArray(insights) ? insights : [];
+  const isRuleBased = safeInsights.some((i) => i.source === "rule-based");
 
   const categoryIcons: Record<string, any> = {
     warning: AlertTriangle,
@@ -78,7 +79,7 @@ export function AIInsightsPanel({ insights, onRegenerate, isGenerating }: AIInsi
 
       {/* Insight Cards Grid */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {insights.map((insight) => {
+        {safeInsights.map((insight) => {
           const Icon = categoryIcons[insight.category] || Lightbulb;
           const badge = categoryBadges[insight.category] || {
             bg: "bg-neutral-100",

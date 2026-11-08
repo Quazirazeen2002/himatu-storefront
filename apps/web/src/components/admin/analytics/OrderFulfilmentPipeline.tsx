@@ -20,7 +20,14 @@ interface OrderFulfilmentPipelineProps {
 }
 
 export function OrderFulfilmentPipeline({ data }: OrderFulfilmentPipelineProps) {
-  const { stages, cancellationRate, awaitingConfirmationCount, activeTransitCount } = data;
+  const {
+    stages = [],
+    cancellationRate = 0,
+    awaitingConfirmationCount = 0,
+    activeTransitCount = 0,
+  } = data || {};
+
+  const safeStages = Array.isArray(stages) ? stages : [];
 
   const stageIcons: Record<string, any> = {
     PENDING: Clock,
@@ -70,7 +77,7 @@ export function OrderFulfilmentPipeline({ data }: OrderFulfilmentPipelineProps) 
 
       {/* 1. Horizontal Status Pipeline Flow */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-        {stages.map((stage) => {
+        {safeStages.map((stage) => {
           const Icon = stageIcons[stage.status] || Package;
           const styling = stageColors[stage.status] || {
             bg: "bg-neutral-50",

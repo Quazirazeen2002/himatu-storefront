@@ -24,20 +24,31 @@ export function RevenueIntelligence({ data, currency = "৳" }: RevenueIntellige
   const [hoveredPoint, setHoveredPoint] = useState<any | null>(null);
 
   const {
-    grossOrderValue,
-    collectedRevenue,
-    pendingCodRevenue,
-    averageOrderValue,
-    totalOrders,
-    cancelledOrders,
-    comparison,
-    trendPoints,
-    paymentMethods,
-  } = data;
+    grossOrderValue = 0,
+    collectedRevenue = 0,
+    pendingCodRevenue = 0,
+    averageOrderValue = 0,
+    totalOrders = 0,
+    cancelledOrders = 0,
+    comparison = {
+      govChangePercent: null,
+      govChangeAbsolute: 0,
+      collectedChangePercent: null,
+      collectedChangeAbsolute: 0,
+      aovChangePercent: null,
+      ordersChangePercent: null,
+      previousPeriodLabel: "previous period",
+    },
+    trendPoints = [],
+    paymentMethods = [],
+  } = data || {};
+
+  const safeTrendPoints = Array.isArray(trendPoints) ? trendPoints : [];
+  const safePaymentMethods = Array.isArray(paymentMethods) ? paymentMethods : [];
 
   // Chart scaling calculations
   const maxVal = Math.max(
-    ...trendPoints.map((p) => (metricMode === "collected" ? p.collected : p.gross)),
+    ...safeTrendPoints.map((p) => (metricMode === "collected" ? p.collected || 0 : p.gross || 0)),
     1000,
   );
 
@@ -46,7 +57,7 @@ export function RevenueIntelligence({ data, currency = "৳" }: RevenueIntellige
   const paddingX = 40;
   const paddingY = 25;
 
-  const pointsCount = trendPoints.length;
+  const pointsCount = safeTrendPoints.length;
   const xStep = pointsCount > 1 ? (chartWidth - paddingX * 2) / (pointsCount - 1) : 0;
 
   const getCoordinates = (val: number, idx: number) => {
@@ -55,9 +66,9 @@ export function RevenueIntelligence({ data, currency = "৳" }: RevenueIntellige
     return { x, y };
   };
 
-  const pathD = trendPoints
+  const pathD = safeTrendPoints
     .map((p, idx) => {
-      const val = metricMode === "collected" ? p.collected : p.gross;
+      const val = metricMode === "collected" ? p.collected || 0 : p.gross || 0;
       const { x, y } = getCoordinates(val, idx);
       return `${idx === 0 ? "M" : "L"} ${x} ${y}`;
     })
@@ -334,8 +345,8 @@ export function RevenueIntelligence({ data, currency = "৳" }: RevenueIntellige
             </p>
 
             <div className="mt-6 space-y-4">
-              {paymentMethods.length > 0 ? (
-                paymentMethods.map((pm) => (
+              {safePaymentMethods.length > 0 ? (
+                safePaymentMethods.map((pm) => (
                   <div key={pm.method} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-semibold text-neutral-800">{pm.name}</span>

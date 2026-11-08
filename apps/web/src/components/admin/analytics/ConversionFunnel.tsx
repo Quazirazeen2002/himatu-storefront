@@ -18,15 +18,17 @@ interface ConversionFunnelProps {
 
 export function ConversionFunnel({ data }: ConversionFunnelProps) {
   const {
-    trackingActivatedAt,
-    totalSessions,
-    productViews,
-    addToCartEvents,
-    checkoutStartedEvents,
-    purchaseCompletedEvents,
-    stages,
-    isHistoricalUnavailable,
-  } = data;
+    trackingActivatedAt = "2026-01-01T00:00:00.000Z",
+    totalSessions = 0,
+    productViews = 0,
+    addToCartEvents = 0,
+    checkoutStartedEvents = 0,
+    purchaseCompletedEvents = 0,
+    stages = [],
+    isHistoricalUnavailable = false,
+  } = data || {};
+
+  const safeStages = Array.isArray(stages) ? stages : [];
 
   const stageIcons = [Users, Eye, ShoppingBag, CreditCard, CheckCircle2];
 
@@ -70,7 +72,7 @@ export function ConversionFunnel({ data }: ConversionFunnelProps) {
 
       {/* 1. Step-down Funnel Graphic */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-        {stages.map((stg, idx) => {
+        {safeStages.map((stg, idx) => {
           const Icon = stageIcons[idx] || Users;
           return (
             <div key={stg.stageName} className="analytics-funnel-step">
