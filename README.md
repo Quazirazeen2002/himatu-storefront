@@ -1,40 +1,51 @@
 # HIMATU
 
-Stage 2 interactive frontend for a premium anime figures and collectibles brand in Bangladesh.
+Premium collectibles storefront, now an npm workspace with a Next.js web application and a NestJS customer API backed by Supabase Auth/PostgreSQL and Prisma.
 
-## Run locally
+## Structure
 
-Requires Node.js 20.9 or newer and npm. Node 22 LTS is recommended.
+- `apps/web`: existing Next.js 16 / React 19 storefront, local photographs/fonts, browser shopping demonstrations and server-side auth routes.
+- `apps/api`: NestJS API, Prisma schema/migrations, JWT/profile authorization, Swagger and serverless entrypoint.
+- `packages/shared`: shared Zod schemas and customer types.
+- `docs`, `design-references`, `output`: documentation, original references and QA evidence.
+
+The frontend was moved intact from the repository root. Asset URLs and storefront routes are preserved; application code is not duplicated.
+
+## Local development
+
+Use Node 24 LTS and npm. Install from the root:
 
 ```sh
 npm ci
-npm run dev
+npm run db:generate
+npm run dev:api
 ```
 
-Open http://localhost:3000. For a production preview:
+In a second terminal run `npm run dev`. Web: http://localhost:3000. API: http://localhost:4000/api/v1/health. Development Swagger: http://localhost:4000/api/docs.
+
+Copy `apps/web/.env.example` to `.env.local` and `apps/api/.env.example` to `.env` when configuring a fresh checkout. Actual local project configuration is ignored and must not be committed. The current workspace is connected to the HIMATU Supabase project; see the Stage 3 report. Database credentials belong only in the API server environment. No Supabase secret key belongs in NEXT_PUBLIC variables.
 
 ```sh
+npm run db:migrate
+npm run db:status
 npm run build
-npm start
+npm run typecheck
+npm run lint
+npm run test
 ```
 
-Validation: `npm run lint` and `npm run typecheck`. Run the build before standalone typechecking on a fresh checkout to generate Next route types. Webpack is selected explicitly for consistent local builds.
+API cryptographic tests run locally with an ephemeral JWKS server. Database integration tests require a migrated disposable `TEST_DATABASE_URL`; otherwise that one integration test is explicitly skipped. All tests, including that suite, were run against a separate isolated PostgreSQL instance during implementation. Do not use production data for disposable tests.
 
-## Stack and structure
+For production previews use `npm run start:api` and `npm start` after building. The API uses a small pooled runtime connection and a trusted public CA certificate; migrations use a separate session/direct URL. No database passwords are printed in documentation.
 
-Next.js 16 App Router, React 19, strict TypeScript, Tailwind CSS 4, Framer Motion and Lucide React. Pages and editorial components use Server Components; browser interactions use narrow client boundaries.
+## Authentication
 
-- `src/app`: homepage, route foundations, metadata, global styles and favicon.
-- `src/components`: layout, primitives, product, collection, campaign and demonstration commerce components.
-- `src/lib`: typed sample data, navigation, collections and CSS design tokens.
-- `design-references`: all nine original user-supplied SVGs, preserved unchanged. Their historical branding and unrelated content are not rendered in the application.
-- `docs`: design system, component conventions, routes, completion report.
-- `output/playwright`: browser QA screenshots.
+Customer forms use same-origin Next Route Handlers. Supabase Auth owns passwords and identity. Sessions use server-written HTTP-only cookies; the browser receives profile data, not access tokens. NestJS independently verifies Supabase JWT signatures and claims, then uses Prisma to create/synchronize a CUSTOMER profile. Profile ownership and database roles are enforced on the API. Registration, email verification, sign-in, sign-out and recovery interfaces use the real SDK, with explicit provider errors instead of fabricated success.
 
-## Preview boundaries
+Public email delivery requires approved sender/SMTP configuration and verification. Production/preview callback domains must be allowlisted in Supabase. Vercel entrypoints/configuration are prepared, but no Vercel preview deployment is claimed without an actual test.
 
-Seven original HIMATU One Piece figure photographs are integrated locally. Prices and availability remain illustrative. Other franchise photography and actual 3D printing project photos are still pending. Bag, wishlist and recently viewed product IDs persist in localStorage with safe hydration and catalogue validation. No API, database, authentication, payment, order processing, quote submission or inventory service exists. Checkout, authentication, contact and printing inquiry forms validate locally and never transmit data. Printing references preview locally without upload. Shipping, returns, legal copy, contact details and social channels await business approval.
+## Commerce boundary
 
-Start with [the Stage 2 completion report](docs/stage-2-completion-report.md), [frontend architecture](docs/frontend-architecture.md), [product discovery](docs/product-discovery.md), [commerce interactions](docs/commerce-interactions.md), [asset management](docs/asset-management.md) and [responsive QA](docs/responsive-testing.md). The [Stage 1 report](docs/stage-1-completion-report.md) is preserved as a historical record. Also see the [design system](docs/design-system.md), [component library](docs/component-library.md) and [route reference](docs/page-structure.md).
+Seven genuine HIMATU photographs and the three labelled non-sale AI concepts remain. Existing prices/stock are demonstration fixtures; bag, wishlist and recently viewed IDs remain browser-persistent. Checkout, payments, orders, printing inquiries and inventory management are not production services in this step. No fake product/stock rows are seeded into PostgreSQL.
 
-Stage 2 adds `/account/orders`; all earlier routes remain. No new runtime packages are required. Browser QA uses the Playwright CLI skill wrapper (see the responsive testing document).
+Start with [Stage 3 architecture](docs/stage-3-step-1-architecture.md), [database](docs/stage-3-step-1-database.md), [authentication](docs/stage-3-step-1-authentication.md) and [completion report](docs/stage-3-step-1-completion-report.md). Earlier stage reports remain historical records; their old source paths refer to the frontend before workspace relocation.
