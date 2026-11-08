@@ -19,19 +19,44 @@ function trustedOrigin(origin: string | null, host: string | null) {
   });
 }
 export function appOrigin(request?: NextRequest) {
-  const configured = new URL(process.env.APP_URL || "http://localhost:3000")
-    .origin;
   if (request) {
-    const candidate = request.headers.get("origin") || request.nextUrl.origin;
-    if (trustedOrigin(candidate, request.headers.get("host"))) return candidate;
+    const host =
+      request.headers.get("x-forwarded-host") || request.headers.get("host");
+    const proto =
+      request.headers.get("x-forwarded-proto") ||
+      (request.nextUrl.protocol
+        ? request.nextUrl.protocol.replace(":", "")
+        : "https");
+    if (host) {
+      return `${proto}://${host}`;
+    }
+    return request.nextUrl.origin;
   }
-  return configured;
+  if (process.env.APP_URL) {
+    try {
+      return new URL(process.env.APP_URL).origin;
+    } catch {}
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
 }
 export function csrfAllowed(request: NextRequest) {
-  return (
-    request.headers.get("x-himatu-request") === "1" &&
-    trustedOrigin(request.headers.get("origin"), request.headers.get("host"))
-  );
+  if (request.headers.get("x-himatu-request") !== "1") return false;
+  const origin = request.headers.get("origin");
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
+  if (!origin || !host) return false;
+  try {
+    const originUrl = new URL(origin);
+    const hostName = host.split(":")[0];
+    if (originUrl.hostname === hostName || originUrl.host === host) return true;
+  } catch {}
+  return trustedOrigin(origin, host);
 }
 export const unavailable = () =>
   NextResponse.json(

@@ -25,6 +25,13 @@ export function allowedAuthOrigin({
     if (origin === configured.origin) return true;
     if (additionalOrigins.some((value) => new URL(value).origin === origin))
       return true;
+    if (
+      host &&
+      (host === supplied.host || host.split(":")[0] === supplied.hostname) &&
+      supplied.hostname.endsWith(".vercel.app")
+    ) {
+      return true;
+    }
     if (!allowLocal || !host || !loopback.has(configured.hostname))
       return false;
     if (

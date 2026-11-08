@@ -8,20 +8,15 @@ import {
 import { allowedAuthOrigin } from "./lib/auth-origin";
 
 function resolveOrigin(request: NextRequest): string {
-  const configured = new URL(process.env.APP_URL || "http://localhost:3000")
-    .origin;
-  const candidate = request.headers.get("origin") || request.nextUrl.origin;
-  const trusted = allowedAuthOrigin({
-    origin: candidate,
-    host: request.headers.get("host"),
-    configuredOrigin: configured,
-    additionalOrigins: (process.env.AUTH_ALLOWED_ORIGINS || "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean),
-    allowLocal: process.env.AUTH_ALLOW_LOCAL_ORIGINS === "true",
-  });
-  return trusted ? candidate : configured;
+  const host =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
+  const proto =
+    request.headers.get("x-forwarded-proto") ||
+    (request.nextUrl.protocol ? request.nextUrl.protocol.replace(":", "") : "https");
+  if (host) {
+    return `${proto}://${host}`;
+  }
+  return request.nextUrl.origin;
 }
 
 export async function proxy(request: NextRequest) {
