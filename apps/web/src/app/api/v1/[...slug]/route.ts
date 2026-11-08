@@ -301,7 +301,7 @@ export async function GET(
             oi."productImage",
             oi."unitPrice",
             oi.quantity,
-            oi."totalPrice",
+            oi."lineTotal",
             oi."createdAt"
           FROM "OrderItem" oi
           WHERE oi."orderId" = $1`,
@@ -335,7 +335,7 @@ export async function GET(
             productImage: item.productImage,
             unitPrice: item.unitPrice,
             quantity: item.quantity,
-            totalPrice: item.totalPrice,
+            lineTotal: item.lineTotal,
             createdAt: new Date(item.createdAt).toISOString(),
           })),
           customer: {
@@ -559,7 +559,7 @@ export async function GET(
           p.price,
           c.name as "categoryName",
           COALESCE(SUM(oi.quantity), 0) as "unitsSold",
-          COALESCE(SUM(oi."totalPrice"), 0) as "revenue",
+          COALESCE(SUM(oi."lineTotal"), 0) as "revenue",
           COALESCE(inv.quantity, 0) as "currentStock"
         FROM "Product" p
         LEFT JOIN "Category" c ON p."categoryId" = c.id
@@ -950,7 +950,7 @@ export async function GET(
           c.id, c.name, c.slug, c."imageUrl",
           COUNT(p.id) as active_products,
           COALESCE(SUM(oi.quantity), 0) as units_sold,
-          COALESCE(SUM(oi."totalPrice"), 0) as revenue,
+          COALESCE(SUM(oi."lineTotal"), 0) as revenue,
           COUNT(DISTINCT oi."orderId") as order_count
         FROM "Category" c
         LEFT JOIN "Product" p ON p."categoryId" = c.id AND p."isActive" = true
@@ -1121,7 +1121,7 @@ export async function GET(
           c.name as category_name,
           COALESCE(img."imageUrl", '') as image_url,
           COALESCE(SUM(oi.quantity), 0) as units_sold,
-          COALESCE(SUM(oi."totalPrice"), 0) as revenue,
+          COALESCE(SUM(oi."lineTotal"), 0) as revenue,
           COALESCE(inv.quantity, 0) as remaining_stock
         FROM "Product" p
         LEFT JOIN "Category" c ON p."categoryId" = c.id
@@ -1683,7 +1683,7 @@ export async function POST(
         const itemTotal = unitPrice * item.quantity;
         const itemRes = await pool.query(
           `INSERT INTO "OrderItem" (
-             id, "orderId", "productId", "productName", sku, "productImage", "unitPrice", quantity, "totalPrice", "createdAt"
+             id, "orderId", "productId", "productName", sku, "productImage", "unitPrice", quantity, "lineTotal", "createdAt"
            ) VALUES (
              gen_random_uuid(), $1, $2, $3, $4, $5, $6, $7, $8, NOW()
            ) RETURNING *`,
@@ -1886,8 +1886,8 @@ export async function POST(
 
       if (initialStock !== undefined) {
         await pool.query(
-          `INSERT INTO "Inventory" (id, "productId", quantity, "reservedQuantity", "createdAt", "updatedAt")
-           VALUES (gen_random_uuid(), $1, $2, 0, NOW(), NOW())`,
+          `INSERT INTO "Inventory" (id, "productId", quantity, "reservedQuantity", "updatedAt")
+           VALUES (gen_random_uuid(), $1, $2, 0, NOW())`,
           [newProd.id, initialStock]
         );
       }
@@ -1909,7 +1909,7 @@ export async function POST(
         );
       } else {
         res = await pool.query(
-          `INSERT INTO "Inventory" (id, "productId", quantity, "reservedQuantity", "createdAt", "updatedAt") VALUES (gen_random_uuid(), $1, $2, COALESCE($3, 0), NOW(), NOW()) RETURNING *`,
+          `INSERT INTO "Inventory" (id, "productId", quantity, "reservedQuantity", "updatedAt") VALUES (gen_random_uuid(), $1, $2, COALESCE($3, 0), NOW()) RETURNING *`,
           [productId, quantity, reservedQuantity ?? 0]
         );
       }
