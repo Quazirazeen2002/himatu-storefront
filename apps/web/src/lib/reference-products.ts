@@ -1,6 +1,7 @@
+import { demoPriceFor } from "./demo-prices";
 import type { ReferenceProduct } from "./types";
 // Real source photographs; stock and local prices must be approved before sale.
-export const referenceProducts: ReferenceProduct[] = [
+const sourceProducts: Omit<ReferenceProduct, "price" | "priceIsDemo">[] = [
   {
     "id": "naruto-uzumaki",
     "name": "Naruto · POP UP PARADE",
@@ -524,3 +525,5 @@ export const referenceProducts: ReferenceProduct[] = [
     "addedAt": -16
   }
 ];
+
+export const referenceProducts: ReferenceProduct[] = sourceProducts.map(product => ({ ...product, price: demoPriceFor(product.id), priceIsDemo: true }));

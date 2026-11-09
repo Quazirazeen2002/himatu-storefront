@@ -17,7 +17,7 @@ export function pricing(product: Pick<FigureProduct, "price" | "salePrice">) {
   return { original, current, discounted, saving: original - current };
 }
 
-export function pricedTotal(products: FigureProduct[], bag: Record<string, number>) {
+export function pricedTotal(products: Pick<FigureProduct, "id" | "price" | "salePrice">[], bag: Record<string, number>) {
   return products.reduce((total, product) => ({
     subtotal: total.subtotal + pricing(product).current * (bag[product.id] || 0),
     count: total.count + (bag[product.id] || 0),

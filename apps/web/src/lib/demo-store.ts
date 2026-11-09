@@ -16,8 +16,8 @@ const empty: DemoState = {
 let snapshot: DemoState | undefined;
 const listeners = new Set<() => void>();
 const known = (id: string) => [...catalogue, ...concepts].some((p) => p.id === id);
-const purchasable = (id: string) =>
-  products.some((p) => p.id === id && p.availability !== "sold-out");
+const canAddToBag = (id: string) =>
+  catalogue.some((p) => p.id === id && p.kind !== "concept" && (p.kind === "reference" || p.availability !== "sold-out"));
 export function sanitizeState(value: unknown): DemoState {
   if (!value || typeof value !== "object") return { ...empty };
   const raw = value as Record<string, unknown>;
@@ -25,7 +25,7 @@ export function sanitizeState(value: unknown): DemoState {
   if (raw.bag && typeof raw.bag === "object" && !Array.isArray(raw.bag)) {
     for (const [id, q] of Object.entries(raw.bag)) {
       if (
-        purchasable(id) &&
+        canAddToBag(id) &&
         typeof q === "number" &&
         Number.isFinite(q) &&
         q > 0
@@ -95,7 +95,7 @@ function update(change: (state: DemoState) => DemoState) {
   listeners.forEach((fn) => fn());
 }
 export function setQuantity(id: string, quantity: number) {
-  if (!purchasable(id) || !Number.isFinite(quantity)) return;
+  if (!canAddToBag(id) || !Number.isFinite(quantity)) return;
   update((state) => {
     const bag = { ...state.bag };
     const q = Math.max(0, Math.min(10, Math.floor(quantity)));

@@ -3,15 +3,15 @@ import { useStore } from "./StoreProvider";
 import { pricing, pricedTotal } from "@/lib/pricing";
 import { formatPrice } from "@/lib/config";
 export function DemoConfirmation() {
-  const { bag, pricedProducts } = useStore();
-  const { count, subtotal } = pricedTotal(pricedProducts, bag);
+  const { bag, bagProducts } = useStore();
+  const { count, subtotal } = pricedTotal(bagProducts, bag);
   return (
     <div className="preview-panel">
       <h2>Your Selection Summary</h2>
       <p>Items currently reserved in your session.</p>
       {count > 0 ? (
         <>
-          {pricedProducts
+          {bagProducts
             .filter((p) => bag[p.id])
             .map((p) => (
               <div className="summary-line" key={p.id}>

@@ -170,11 +170,11 @@ export function CheckoutForm() {
 
   // Items in bag
   const bagEntries = Object.entries(store.bag).filter(
-    ([id, quantity]) => quantity > 0 && store.pricedProducts.some((p) => p.id === id),
+    ([id, quantity]) => quantity > 0 && store.bagProducts.some((p) => p.id === id),
   );
 
   const cartItems = bagEntries.map(([id, quantity]) => {
-    const product = store.pricedProducts.find((p) => p.id === id)!;
+    const product = store.bagProducts.find((p) => p.id === id)!;
     return {
       product,
       quantity,
@@ -183,8 +183,9 @@ export function CheckoutForm() {
   });
 
   const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotal = cartItems.reduce((acc, item) => acc + item.lineTotal, 0);
+  const subtotal = cartItems.reduce((acc, item) => acc + (item.lineTotal ?? 0), 0);
 
+  const hasDemoPrices = cartItems.some(item => item.product.kind === "reference");
   const isFreeShipping = subtotal >= 15000 || freeShippingPromo;
   const selectedShipping =
     SHIPPING_METHODS.find((m) => m.id === values.shippingMethod) ||
@@ -286,7 +287,7 @@ export function CheckoutForm() {
       lastWhatsAppOpen.current = now;
       const message = formatWhatsAppOrder({
         customer: values,
-        items: cartItems.map(({ product, quantity }) => ({ name: product.name, character: product.character, quantity, unitPrice: pricing(product).current, slug: product.id })),
+        items: cartItems.map(({ product, quantity }) => ({ name: product.name, character: product.character, quantity, unitPrice: pricing(product).current, demoPrice: product.kind === "reference", slug: product.id })),
         subtotal, discount: discountAmount, shipping: shippingPrice, total: grandTotal,
         shippingMethod: selectedShipping.title,
         paymentMethod: values.paymentMethod === "COD" ? "Cash on delivery (subject to confirmation)" : values.paymentMethod === "BKASH" ? "bKash (arrange with HIMATU)" : "Card / bank (arrange with HIMATU)",
@@ -295,6 +296,10 @@ export function CheckoutForm() {
       setWhatsappDraft(message);
       setCopied(false);
       window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+      return;
+    }
+    if (hasDemoPrices) {
+      setServerError("This cart includes demo prices. Use WhatsApp checkout to confirm the final selling prices before payment.");
       return;
     }
     setSubmitting(true);
@@ -751,7 +756,7 @@ export function CheckoutForm() {
         <section className="checkout-card checkout-channel" aria-labelledby="order-channel-heading">
           <h2 id="order-channel-heading">HOW WOULD YOU LIKE TO ORDER?</h2>
           <label className="option-card"><input type="radio" name="orderChannel" checked={orderChannel === "whatsapp"} onChange={() => setOrderChannel("whatsapp")} /><span><strong>WhatsApp order</strong><small>One message with your bag and delivery details. Review and tap Send in WhatsApp.</small></span></label>
-          <label className="option-card"><input type="radio" name="orderChannel" checked={orderChannel === "website"} onChange={() => setOrderChannel("website")} /><span><strong>Website checkout</strong><small>Continue with the existing account and payment flow.</small></span></label>
+          <label className="option-card"><input type="radio" name="orderChannel" disabled={hasDemoPrices} checked={orderChannel === "website"} onChange={() => setOrderChannel("website")} /><span><strong>Website checkout</strong><small>{hasDemoPrices ? "Demo-priced items use WhatsApp checkout to confirm final selling prices." : "Continue with the existing account and payment flow."}</small></span></label>
         </section>
         {whatsappDraft && <section className="checkout-card whatsapp-draft" aria-label="WhatsApp order message" role="status">
           <h2>YOUR MESSAGE IS READY.</h2><p>WhatsApp opens with your order details. Press Send there to contact HIMATU. Your bag stays saved until the order is confirmed.</p>
@@ -804,7 +809,7 @@ export function CheckoutForm() {
                 </div>
                 <div className="summary-product-meta">
                   <h4 className="summary-product-name">{p.name}</h4>
-                  <p className="summary-product-franchise">{p.franchise}</p>
+                  <p className="summary-product-franchise">{p.franchise}{p.kind === "reference" ? " · Demo price" : ""}</p>
                 </div>
                 <span className="summary-product-price">
                   {formatPrice(lineTotal)}
@@ -844,6 +849,7 @@ export function CheckoutForm() {
 
           {/* Financial Breakdown */}
           <div className="summary-totals-list">
+            {hasDemoPrices && <p className="demo-note">Includes demo prices. Final selling prices will be confirmed by HIMATU before payment.</p>}
             <div className="summary-line">
               <span>Subtotal</span>
               <span>{formatPrice(subtotal)}</span>

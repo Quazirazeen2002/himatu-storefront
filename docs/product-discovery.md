@@ -51,3 +51,15 @@ Administrators: open **Admin → Categories → Add category or franchise**. Cho
 The active shop contains eight existing priced products and seventeen real-photo reference entries (25 total; pages of 9, 9 and 7). Each requested named franchise and product category has at least one entry. References have no invented price or availability and are excluded by price/stock filters when those require confirmed values. They support search, category/franchise filtering, pagination, wishlist, detail galleries and source-linked WhatsApp enquiries. The seven AI concepts retain their direct detail routes but are no longer in the shop catalogue or homepage concept lab.
 
 Quick view provides the same purchase or enquiry actions with fewer navigation steps. Mobile shortcuts expose categories, wishlist and the saved bag. Checkout defaults to a fully formatted WhatsApp order request for the existing priced bag; website checkout remains selectable. See `original-photography-and-whatsapp.md` for the exact message contents and confirmation boundary.
+
+## Cart and direct enquiry together — 9 November 2026
+
+Reference product details and quick view now offer a quantity selector and **Add to cart** before **Ask HIMATU on WhatsApp**. Both paths remain available. Reference items persist in the same saved bag, support quantity changes/removal, and contribute to header and checkout item counts. They retain unknown prices rather than being treated as free.
+
+A cart containing references can be submitted as one WhatsApp order/quote request together with priced products. Known prices and quantities are included, unpriced lines say “Please quote,” and the complete total remains awaiting confirmation. Website payment checkout is disabled for that mixed/unpriced cart until pricing is confirmed. Fully priced carts retain both checkout channels. This supersedes the earlier restriction that reference entries could not be added to the bag.
+
+## Numeric demo prices — 9 November 2026
+
+At the owner's request, all seventeen sourced reference entries now have positive illustrative BDT prices instead of pending-price text. Amounts are centralized in `apps/web/src/lib/demo-prices.ts` (৳199–৳7,490) and displayed with a Demo price marker. Existing owner-configured product prices and discounts remain unchanged.
+
+Demo amounts participate in price filtering/sorting, item line totals, cart totals, checkout totals and WhatsApp messages. The WhatsApp draft marks affected lines DEMO PRICE and uses a numeric estimated total. Add to cart and direct WhatsApp enquiry remain available. Demo-priced items continue through WhatsApp confirmation before payment; these amounts are not confirmed inventory prices or new backend price records. This supersedes the earlier pending-quote presentation.

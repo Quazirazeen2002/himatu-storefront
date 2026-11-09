@@ -23,11 +23,12 @@ import { catalogue } from "@/lib/catalogue";
 import { fallbackCategories } from "@/lib/taxonomy";
 import type { CategoryDto } from "@himatu/shared";
 import { getCategories, getProducts } from "@/lib/commerce-api";
-import type { Product, FigureProduct } from "@/lib/types";
+import type { Product, FigureProduct, ReferenceProduct } from "@/lib/types";
 
 interface Store extends DemoState {
   categoryRegistry: CategoryDto[];
   pricedProducts: FigureProduct[];
+  bagProducts: (FigureProduct | ReferenceProduct)[];
   pricedCatalogue: Product[];
   query: string;
   setQuery: (q: string) => void;
@@ -68,7 +69,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return () => { active = false; window.removeEventListener("focus", refresh); };
   }, []);
   const pricedProducts = useMemo(() => products.map(product => ({ ...product, ...prices[product.id] })), [prices]);
-  const pricedCatalogue = useMemo(() => catalogue.map(product => (product.kind === "concept" || product.kind === "reference") ? product : ({ ...product, ...prices[product.id] })), [prices]);
+  const pricedCatalogue = useMemo<Product[]>(() => catalogue.map(product => (product.kind === "concept" || product.kind === "reference") ? product : ({ ...product, ...prices[product.id] })), [prices]);
+
+  const bagProducts = useMemo(() => pricedCatalogue.filter((product): product is FigureProduct | ReferenceProduct => product.kind !== "concept"), [pricedCatalogue]);
 
   useEffect(() => {
     initStorefrontSession();
@@ -78,6 +81,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       value={{
         ...state,
         pricedProducts,
+        bagProducts,
         categoryRegistry,
         pricedCatalogue,
         drawer,

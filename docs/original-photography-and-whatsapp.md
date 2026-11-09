@@ -41,3 +41,11 @@ Targeted ESLint checks pass for the changed story, slideshow, product, checkout 
 Browser QA uses an isolated source preview with its auth proxy omitted, account responses mocked and category/product reads forwarded to the live local API. Production authentication remains unchanged. The WhatsApp test intercepts `window.open`: no message was sent and no real order/payment was created. The existing website payment flow was preserved but not exercised with a live transaction.
 
 Screenshots are in `output/playwright/original-photo-refinement/`. This is targeted Chromium validation, not cross-browser certification.
+
+## Follow-up: retain both cart and WhatsApp actions
+
+Reference listings now have Add to cart above the direct WhatsApp enquiry. Quantity selection, saved bag state, drawer display, removal, quick-view feedback and checkout include these items. Unknown prices are explicitly awaiting a quote. Mixed WhatsApp requests include both priced and unpriced lines; no fabricated total is shown. The direct enquiry link includes the selected quantity. The earlier statement that references cannot enter the bag is superseded by this follow-up; website payment remains unavailable while any cart item lacks a confirmed price.
+
+## Follow-up: owner-requested dummy prices
+
+The seventeen reference entries now use numeric demo BDT prices from `apps/web/src/lib/demo-prices.ts`, replacing pending-price presentation. Demo markers appear alongside these amounts and in the order draft. Cart/checkout arithmetic includes all selected entries. Existing original prices remain intact. Final selling prices are confirmed through WhatsApp before payment for demo-priced items.

@@ -34,7 +34,9 @@ export interface ConceptProduct extends ProductBase {
 }
 export interface ReferenceProduct extends ProductBase {
   kind: "reference";
-  price?: never;
+  price: number;
+  salePrice?: number | null;
+  priceIsDemo: true;
   availability?: never;
   source: { page: string; label: string };
   images: { src: string; width: number; height: number }[];
