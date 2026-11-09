@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   User,
   LogOut,
-  ChevronDown,
   Package,
   Heart,
   ShieldCheck,
@@ -29,11 +28,6 @@ function getInitials(name: string, email: string): string {
     return email.slice(0, 2).toUpperCase();
   }
   return "H";
-}
-
-function getFirstName(name: string): string {
-  if (!name || !name.trim()) return "Collector";
-  return name.trim().split(/\s+/)[0];
 }
 
 export function ProfileMenu() {
@@ -119,7 +113,6 @@ export function ProfileMenu() {
         aria-label="Sign in"
       >
         <User size={16} />
-        <span className="profile-auth-label">SIGN IN</span>
       </Link>
     );
   }
@@ -138,14 +131,12 @@ export function ProfileMenu() {
         aria-label="Sign in to your HIMATU account"
       >
         <User size={16} />
-        <span className="profile-auth-label">SIGN IN</span>
       </Link>
     );
   }
 
   // When signed in
   const initials = getInitials(session.user.fullName, session.user.email);
-  const firstName = getFirstName(session.user.fullName);
   const wishlistCount = store.wishlist.length;
 
   return (
@@ -158,15 +149,8 @@ export function ProfileMenu() {
         aria-haspopup="menu"
         aria-label={`Account menu for ${session.user.fullName || "customer"}`}
       >
-        <span className="profile-avatar-circle">
-          {initials}
-          <span className="profile-online-indicator" aria-hidden="true" />
-        </span>
-        <span className="profile-avatar-name">{firstName}</span>
-        <ChevronDown
-          size={13}
-          className={`profile-avatar-chevron ${isOpen ? "rotated" : ""}`}
-        />
+        <User size={20} aria-hidden="true" />
+        <span className="profile-initials" aria-hidden="true">{initials}</span>
       </button>
 
       {isOpen && (

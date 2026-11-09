@@ -1,0 +1,448 @@
+{
+  "downloadedAt": "2026-11-09",
+  "status": "Original third-party product photography. Reference/enquiry listings; HIMATU inventory and pricing are not confirmed. Copyright remains with the respective owners; source attribution does not establish a reuse licence.",
+  "products": [
+    {
+      "id": "naruto-uzumaki",
+      "page": "https://www.goodsmile.com/en/product/10314/POP%2BUP%2BPARADE%2BNaruto%2BUzumaki",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20220425/12629/98168/large/affba8a8d19383a6084695f0f2bb80a6.jpg",
+          "sha256": "597b27de7d7ae2524b2d597a3eec96abe2a28a52724130f906a749c11bb53320"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20220425/12629/98169/large/029dd6e08c1a4e0e178494ffad99b928.jpg",
+          "sha256": "d520d97c3734e4dfd2a4181680b0f300b6b7f44b8b88592fed774e86dab96333"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/naruto-uzumaki-1.webp",
+          "width": 550,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/naruto-uzumaki-2.webp",
+          "width": 550,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "eren-yeager",
+      "page": "https://www.goodsmile.com/en/product/9304/POP%2BUP%2BPARADE%2BEren%2BYeager",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20210803/11615/88694/large/7596685c375650f46941d2863a51ee07.jpg",
+          "sha256": "ac5ca71d31c09c682f987e3ce7f2ce44b870ed6c50c22a59c173653ec1beadb3"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20210803/11615/88695/large/bdd0ed6431d6318f20d4495d624e8e72.jpg",
+          "sha256": "4ed116aadb87e0b34672e0fee74c2a6efbc5f114f5925e7e643a4a295ca28576"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/eren-yeager-1.webp",
+          "width": 570,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/eren-yeager-2.webp",
+          "width": 570,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "tanjiro-kamado",
+      "page": "https://www.goodsmile.com/en/product/7787/figma%2BTanjiro%2BKamado",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20200918/10092/74595/large/68ba7ca77dccbc9f4ba8f4c01c9afa0d.jpg",
+          "sha256": "c5efdad01c72b162845f4639d6a1548ab1889a795c771b08ac941d3e6bfbf9fb"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20200918/10092/74596/large/66fc6d6265d02a1e835c54daef2848bb.jpg",
+          "sha256": "182d1261a2508911f4edc1578dc5ee59f7835abae91475b9ba931a0f8f195eea"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/tanjiro-kamado-1.webp",
+          "width": 600,
+          "height": 750
+        },
+        {
+          "src": "/images/sourced/tanjiro-kamado-2.webp",
+          "width": 600,
+          "height": 750
+        }
+      ]
+    },
+    {
+      "id": "gon-freecss",
+      "page": "https://www.goodsmile.com/en/product/11355/Gon%2BFreecss",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20221213/13670/108519/large/bfa503c0635e7936ec59bd98e0dc3b82.jpg",
+          "sha256": "f496e11020c2fe0b766a5fa907b83af8242a8cfea2e8b1d7b0b8d20e42f2780d"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20221213/13670/108520/large/b75ce72e7954fe5098b4be7e2bfb9afb.jpg",
+          "sha256": "c4e2664d45a5479f19c92daa55b731dcc88a19713a131ae190e9552fc8077200"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/gon-freecss-1.webp",
+          "width": 600,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/gon-freecss-2.webp",
+          "width": 600,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "sung-jinwoo",
+      "page": "https://www.goodsmile.com/en/product/1137314/POP%20UP%20PARADE%20Sung%20Jinwoo%20L%20Size",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/1137314/VCnU2yHW3wR0KdPq6bSELDcvh71txQaJ.jpg",
+          "sha256": "aaee12cce9100c6ff4afed76629222204eda78f7165e55fe2b96c802a3676f21"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/1137314/dgwzRPuJLpyiYqsDfhZcXaBW7ktFSeHb.jpg",
+          "sha256": "4b912d3dc4768a4bf4ba6b03b1b12217505b3524cb1fd86805f6eb55a0c8173a"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/sung-jinwoo-1.webp",
+          "width": 750,
+          "height": 1050
+        },
+        {
+          "src": "/images/sourced/sung-jinwoo-2.webp",
+          "width": 750,
+          "height": 1050
+        }
+      ]
+    },
+    {
+      "id": "yoichi-isagi",
+      "page": "https://www.goodsmile.com/en/product/11251/Nendoroid%2BIsagi%2BYoichi",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20221117/13566/107588/large/284c9dbada0e062338e1010d4f0c08dd.jpg",
+          "sha256": "f9a3ab31fa0ce83d1fe6bf109bbe32f3ba235131f339c44c3f48afba6bda41e3"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20221117/13566/107401/large/b33c7d46c3862c3891df01d0c28a44f8.jpg",
+          "sha256": "3e4169dd4fcbcc1a802e015990064ff5bab9164d0b36e1fdaa5762995318d383"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/yoichi-isagi-1.webp",
+          "width": 550,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/yoichi-isagi-2.webp",
+          "width": 550,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "light-yagami",
+      "page": "https://www.goodsmile.com/en/product/132/Nendoroid%2BLight%2BYagami",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/132/Yx7atG908b1R42NufeXgpLAhQvJZTDUq.jpg",
+          "sha256": "8964b31a6d799f2808a3cf37e5cc505b2d605cdd24b31071bd8e0a5cd2a69d87"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/light-yagami-1.webp",
+          "width": 791,
+          "height": 600
+        }
+      ]
+    },
+    {
+      "id": "satoru-gojo",
+      "page": "https://www.goodsmile.com/en/product/9814/POP%2BUP%2BPARADE%2BSatoru%2BGojo",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20211213/12126/93304/large/cf51327217ffc55e97b436e1898f31bd.jpg",
+          "sha256": "0388a21bfb34c25dad2fd43a0ce0eacbdd11be68f93eb051afee9cd8f5f7c503"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20211213/12126/93305/large/702f716f77de3f7865d5a5ec89c7ddf9.jpg",
+          "sha256": "9dd4dc093f02837f397c94493a91608018626753c3f6160ccfdb080700225a5c"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/satoru-gojo-1.webp",
+          "width": 570,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/satoru-gojo-2.webp",
+          "width": 570,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "ichigo-kurosaki",
+      "page": "https://www.goodsmile.info/en/product/15374/POP%2BUP%2BPARADE%2BIchigo%2BKurosaki.html",
+      "files": [
+        {
+          "url": "https://images.goodsmile.info/cgm/images/product/20231222/15374/125225/large/2e033625d59f9069d2a48715bb5a531e.jpg",
+          "sha256": "2a2c5ae98e5371520485e48d66b12107f7b506586e96288971b1e845b00efd7e"
+        },
+        {
+          "url": "https://images.goodsmile.info/cgm/images/product/20231222/15374/125226/large/02508f5d3ac50604248dd937725750ff.jpg",
+          "sha256": "418b587bfa4e9589f1adc42dfb39996a1eb8fc0aef29b60c8ff605fb43979df5"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/ichigo-kurosaki-1.webp",
+          "width": 550,
+          "height": 770
+        },
+        {
+          "src": "/images/sourced/ichigo-kurosaki-2.webp",
+          "width": 550,
+          "height": 770
+        }
+      ]
+    },
+    {
+      "id": "spider-man",
+      "page": "https://www.goodsmile.com/en/product/1140942/DLX%2BSpiderman%2BAdvanced%2BSuit%2B2.0%2BPeter%2BParker%2B",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/1140942/HNAGynU49h6u0B1tWredDMqETXwcRSZK.jpg",
+          "sha256": "76a9543428cb2b292d4b4fcdd28d08678f6d5fb5661d52384831273e212123a1"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/1140942/VHsvtP8CAmF7JM3c6fSXk0TB2anhuYdi.jpg",
+          "sha256": "e220e7cf24d428e44fce200c2a022e531ba11395b0ab069e8aa55ce50e9ddf42"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/spider-man-1.webp",
+          "width": 750,
+          "height": 1000
+        },
+        {
+          "src": "/images/sourced/spider-man-2.webp",
+          "width": 750,
+          "height": 1000
+        }
+      ]
+    },
+    {
+      "id": "batman",
+      "page": "https://www.goodsmile.com/en/product/9184/Art%20Respect%20Batman",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20210714/11491/87319/large/1cf725cb2d956849b870c2dbdc1a6469.jpg",
+          "sha256": "9b200b3ed29fd58e89a026ad920eba5103d75e2f5557dbbc33b025be0e200d5a"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20210714/11491/87320/large/62b49933387875b8c4cc85ebb7c126a5.jpg",
+          "sha256": "eb50bfe52533798657f8332299e7e150000d8fee189be8968dc3eb30667ecf21"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/batman-1.webp",
+          "width": 550,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/batman-2.webp",
+          "width": 550,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "harry-potter",
+      "page": "https://www.goodsmile.com/en/product/5345/Nendoroid%2BHarry%2BPotter",
+      "files": [
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20180921/7629/54668/large/7149d59db06205acadb67439d3ed8a71.jpg",
+          "sha256": "194ad2e4f98ce3efd68bc1ef70e119b5538c43574bb5fdf0a2988d45fd3b388a"
+        },
+        {
+          "url": "https://www.goodsmile.com/gsc-webrevo-sdk-storage-prd/product/image/product/20180921/7629/54669/large/b86208cb5d88877313eb0bd2b1871574.jpg",
+          "sha256": "e9aa9bb3db3794715efa0488f4e5f73704e51f887afe418a9a88c180972e53e1"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/harry-potter-1.webp",
+          "width": 600,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/harry-potter-2.webp",
+          "width": 600,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "son-goku",
+      "page": "https://tamashiiweb.com/item/13831/?wovn=en",
+      "files": [
+        {
+          "url": "https://tamashiiweb.com/storage/images/products/imported/item_0000013831_zvpcxIVK_01.jpg",
+          "sha256": "d83caa18cd9cad9591e03c03fcde1a1fc62b83c933384a8a8af052f33459fcb4"
+        },
+        {
+          "url": "https://tamashiiweb.com/storage/images/products/imported/item_0000013831_6rldzSKT_03.jpg",
+          "sha256": "716ed7ad44e5e3cd11b0dda33b912141a68d894f3242dc8a62368fa8b54b1b6c"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/son-goku-1.webp",
+          "width": 960,
+          "height": 1200
+        },
+        {
+          "src": "/images/sourced/son-goku-2.webp",
+          "width": 960,
+          "height": 1200
+        }
+      ]
+    },
+    {
+      "id": "tanjiro-nichirin-sword",
+      "page": "https://tamashiiweb.com/item/15247/?wovn=en",
+      "files": [
+        {
+          "url": "https://tamashiiweb.com/storage/images/products/imported/item_0000015247_ruQLbU9c_01.jpg",
+          "sha256": "637cffaa8400faa1c612f4cc062e9d016875cb1d0d7f1dd499ee4725c8f51829"
+        },
+        {
+          "url": "https://tamashiiweb.com/storage/images/products/imported/item_0000015247_ZfFLN8WI_03.jpg",
+          "sha256": "9f14550264fec207ec35577ab83e5abb70ca7d1fc439cd829236c8272d927699"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/tanjiro-nichirin-sword-1.webp",
+          "width": 1200,
+          "height": 642
+        },
+        {
+          "src": "/images/sourced/tanjiro-nichirin-sword-2.webp",
+          "width": 1200,
+          "height": 576
+        }
+      ]
+    },
+    {
+      "id": "naruto-keychain",
+      "page": "https://trade.abyssecorp.com/en/pvc-keychains/198716-naruto-keychain-pvc-naruto-x4-3665361074779.html",
+      "files": [
+        {
+          "url": "https://trade.abyssecorp.com/827018-large_default/naruto-keychain-pvc-naruto-x4.jpg",
+          "sha256": "a95348e42565aeed40ac69244039c81e13d25f4de93a89beca88323c224cf2cf"
+        },
+        {
+          "url": "https://trade.abyssecorp.com/827019-large_default/naruto-keychain-pvc-naruto-x4.jpg",
+          "sha256": "aff8c924cb302ce812f37c90f4d71ddc46e6ef0d08850af3867b84d6bb2ebbe8"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/naruto-keychain-1.webp",
+          "width": 800,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/naruto-keychain-2.webp",
+          "width": 800,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "konoha-pin",
+      "page": "https://trade.abyssecorp.com/en/pins/199017-naruto-shippuden-pin-konoha-symbol-x4-3665361096542.html",
+      "files": [
+        {
+          "url": "https://trade.abyssecorp.com/830071-large_default/naruto-shippuden-pin-konoha-symbol-x4.jpg",
+          "sha256": "66ac4538f5be6ca7bb775ba42e213041ca250f3f1e1d16a161dfb961d7f63bc5"
+        },
+        {
+          "url": "https://trade.abyssecorp.com/830072-large_default/naruto-shippuden-pin-konoha-symbol-x4.jpg",
+          "sha256": "057f9943e2d67a7d839894844c83390021d28b417244d8273e9adbd1641ca726"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/konoha-pin-1.webp",
+          "width": 800,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/konoha-pin-2.webp",
+          "width": 800,
+          "height": 800
+        }
+      ]
+    },
+    {
+      "id": "naruto-sasuke-shirt",
+      "page": "https://trade.abyssecorp.com/en/unisex-t-shirts/206884-naruto-tshirt-unisex-black-naruto-sasuke.html",
+      "files": [
+        {
+          "url": "https://trade.abyssecorp.com/830804-large_default/naruto-tshirt-unisex-black-naruto-sasuke.jpg",
+          "sha256": "a2ea7aba074cb83212ae03de4273cc0a7b76c49044c802fc653fa481d36da21d"
+        },
+        {
+          "url": "https://trade.abyssecorp.com/830805-large_default/naruto-tshirt-unisex-black-naruto-sasuke.jpg",
+          "sha256": "1f0ee539687309abf20deaeb09156c65d7352b5b5401b3e321108504af89d516"
+        }
+      ],
+      "optimized": [
+        {
+          "src": "/images/sourced/naruto-sasuke-shirt-1.webp",
+          "width": 800,
+          "height": 800
+        },
+        {
+          "src": "/images/sourced/naruto-sasuke-shirt-2.webp",
+          "width": 800,
+          "height": 800
+        }
+      ]
+    }
+  ],
+  "additionalAssets": [
+    {
+      "id": "collector-pin",
+      "sourcePage": "https://trade.abyssecorp.com/en/pins/205187-one-piece-pin-strawhat-x4-3665361095873.html",
+      "imageUrl": "https://trade.abyssecorp.com/830066-large_default/one-piece-pin-strawhat-x4.jpg",
+      "sha256": "700f5707383966650ff3122f9430c492ca2e429273c655a5a2a90f039774b6c2",
+      "note": "Original ABYstyle Straw Hat emblem pin source photograph, replacing unrelated figure image on existing pin entry. No HIMATU stock verification implied."
+    }
+  ]
+}

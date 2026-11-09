@@ -1,6 +1,6 @@
 import { Container } from "@/components/ui/Primitives";
 import { ProductCatalog } from "@/components/products/ProductCatalog";
-export const metadata = { title: "Shop figures" };
+export const metadata = { title: "Shop all products" };
 export default function Shop() {
   return (
     <Container>

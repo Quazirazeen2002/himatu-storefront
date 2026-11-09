@@ -1,3 +1,4 @@
+import { CategoriesModule } from "../categories/categories.module";
 import { Module } from "@nestjs/common";
 import { ProductsService } from "./products.service";
 import { ProductsController } from "./products.controller";
@@ -7,7 +8,7 @@ import { AuthModule } from "../auth/auth.module";
 import { UsersModule } from "../users/users.module";
 
 @Module({
-  imports: [PrismaModule, StorageModule, AuthModule, UsersModule],
+  imports: [PrismaModule, StorageModule, AuthModule, UsersModule, CategoriesModule],
   providers: [ProductsService],
   controllers: [ProductsController],
   exports: [ProductsService],

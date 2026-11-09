@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { BrandLogo } from "./BrandLogo";
 import { SessionLink } from "../commerce/SessionLink";
 import { ProfileMenu } from "./ProfileMenu";
 import { usePathname } from "next/navigation";
@@ -18,10 +19,11 @@ import { useEffect, useRef, useState } from "react";
 import { authService, type CustomerSession } from "@/lib/auth-service";
 import { useStore } from "../commerce/StoreProvider";
 import { BagItems } from "../commerce/Commerce";
-import { catalogue, CONCEPT_LABEL } from "@/lib/catalogue";
+import { catalogue } from "@/lib/catalogue";
 import { matchesSearch } from "@/lib/discovery";
-import { navigation, collections } from "@/lib/config";
-import { ButtonLink, DemoNotice, IconButton, Input } from "../ui/Primitives";
+import { categoryKind } from "@/lib/taxonomy";
+import { navigation } from "@/lib/config";
+import { ButtonLink, IconButton, Input } from "../ui/Primitives";
 export function Header() {
   const pathname = usePathname();
   const store = useStore();
@@ -69,13 +71,9 @@ export function Header() {
   }
   return (
     <>
-      <div className="announcement">
-        HIMATU — PREMIUM FIGURES & COLLECTIBLES{" "}
-        <span>DISCOVER. COLLECT. DISPLAY.</span>
-      </div>
-      <header className="header">
+      <header className={`header ${pathname === "/" ? "header--home" : ""}`}>
         <Link className="wordmark" href="/" aria-label="HIMATU home">
-          HIMATU
+          <BrandLogo />
         </Link>
         <nav className="desktop-nav" aria-label="Main navigation">
           {navigation.map((item) => (
@@ -85,12 +83,12 @@ export function Header() {
                 aria-current={pathname === item.href ? "page" : undefined}
               >
                 {item.label}
-                {item.label === "Collections" && <ChevronDown size={12} />}
+                {["Collections", "Categories"].includes(item.label) && <ChevronDown size={12} />}
               </Link>
-              {item.label === "Collections" && (
+              {["Collections", "Categories"].includes(item.label) && (
                 <div className="nav-dropdown">
-                  {collections.map((c) => (
-                    <Link href={`/collections/${c.slug}`} key={c.slug}>
+                  {store.categoryRegistry.filter(c => categoryKind(c) === (item.label === "Categories" ? "PRODUCT_TYPE" : "FRANCHISE")).map((c) => (
+                    <Link href={`/${item.label === "Categories" ? "categories" : "collections"}/${c.slug}`} key={c.slug}>
                       {c.name}
                       <ArrowUpRight size={14} />
                     </Link>

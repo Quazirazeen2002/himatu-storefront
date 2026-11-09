@@ -1,29 +1,16 @@
 import Link from "next/link";
 import { SessionLink } from "../commerce/SessionLink";
-import { ArrowDown, ArrowUpRight, MoveUpRight } from "lucide-react";
+import { ArrowUpRight, MoveUpRight } from "lucide-react";
 import { ButtonLink, Container } from "../ui/Primitives";
 import { AssetImage } from "../products/AssetImage";
 import { assets } from "@/lib/assets";
+import { HeroSlideshow } from "./HeroSlideshow";
 import { Reveal } from "../ui/Reveal";
 export function HeroCampaign() {
   return (
-    <section className="hero">
+    <section className="hero hero--cinematic">
       <div className="hero-visual">
-        <div className="hero-topline">
-          <span>THE HIMATU COLLECTION</span>
-          <span>CURATED FOR YOUR WORLD</span>
-        </div>
-        <div className="hero-background-type" aria-hidden="true">
-          HIMATU
-        </div>
-        <div className="hero-disc" />
-        <div className="hero-figure">
-          <AssetImage
-            asset={assets.home}
-            priority
-            sizes="(max-width:767px) 100vw, 50vw"
-          />
-        </div>
+        <HeroSlideshow />
         <Reveal className="hero-copy">
           <p className="eyebrow">
             <span className="red-mark" /> A WORLD WORTH COLLECTING
@@ -38,7 +25,7 @@ export function HeroCampaign() {
             characters you love.
           </p>
           <div className="hero-buttons">
-            <ButtonLink href="/collections">EXPLORE COLLECTIONS</ButtonLink>
+            <ButtonLink href="/shop">SHOP THE COLLECTION</ButtonLink>
             <SessionLink className="button button--outline" />
             <Link href="/shop" className="hero-secondary">
               SHOP ALL FIGURES
@@ -46,16 +33,6 @@ export function HeroCampaign() {
             </Link>
           </div>
         </Reveal>
-        <div className="hero-bottom">
-          <span>HIMATU / ONE PIECE COLLECTION</span>
-          <a href="#featured-figures" aria-label="Discover featured figures">
-            <ArrowDown size={19} />
-          </a>
-        </div>
-      </div>
-      <div className="hero-footnote">
-        <span>MADE FOR FANS. BUILT FOR COLLECTIONS.</span>
-        <span>ANIME FIGURES / CHARACTER COLLECTIBLES / CUSTOM CREATIONS</span>
       </div>
     </section>
   );

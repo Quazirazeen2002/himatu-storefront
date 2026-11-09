@@ -46,11 +46,7 @@ export const figurePhotos: Record<string, ImageAsset> = {
     "867463200_122155860927356138_2040773041185832800_n.jpg",
     "Roronoa Zoro chibi figure with green hair and swords at HIMATU",
   ),
-  "collector-pin": photo(
-    "collector-pin",
-    "874109780_122155860429356138_159630139292783632_n.jpg",
-    "HIMATU Collector Pin · Straw Hat Emblem test item",
-  ),
+  "collector-pin": { id: "collector-pin", src: "/images/sourced/straw-hat-pin.webp", alt: "One Piece Straw Hat emblem pin in the original ABYstyle source photograph", width: 1200, height: 1200, placeholder: false, fit: "contain" },
 };
 function photo(id: string, file: string, alt: string): ImageAsset {
   return {
@@ -64,6 +60,10 @@ function photo(id: string, file: string, alt: string): ImageAsset {
   };
 }
 export const conceptImages: Record<string, ImageAsset> = {
+  "ember-vanguard": concept("ember-vanguard", "AI-generated Ember Vanguard collectible concept with copper hair, ivory armor and a mechanical gauntlet; not for sale"),
+  "tidebound-oracle": concept("tidebound-oracle", "AI-generated Tidebound Oracle collectible concept with teal robes, astrolabe staff and sculpted waves; not for sale"),
+  "ironwood-ranger": concept("ironwood-ranger", "AI-generated Ironwood Ranger collectible concept with a green cloak and mechanical longbow; not for sale"),
+  "lunar-mechanist": concept("lunar-mechanist", "AI-generated Lunar Mechanist collectible concept with silver armor and a companion automaton; not for sale"),
   "aether-forged-swordsman": concept(
     "aether-forged-swordsman",
     "Original fantasy swordsman AI-generated figurine concept, armored with ivory sculpted fabric; not for sale",
@@ -91,21 +91,14 @@ function concept(id: string, alt: string): ImageAsset {
 export const assets = {
   home: figurePhotos["luffy-gear-five-action"],
   editorial: [figurePhotos["zoro-asura"], figurePhotos["straw-hat-captain"]],
-  collection: (c: Collection): ImageAsset =>
-    c.slug === "one-piece"
-      ? { ...figurePhotos["zoro-three-sword-style"], fit: "cover" }
-      : c.slug === "other-collections"
-        ? conceptImages["celestial-wayfarer"]
-        : {
-            id: c.slug,
-            alt: `${c.name} photography coming soon`,
-            width: 500,
-            height: 600,
-            placeholder: true,
-          },
+  collection: (c: Collection): ImageAsset => ({
+    id: c.slug, src: c.imageUrl || "/images/categories/category-default.svg",
+    alt: c.imageIsDemo ? `${c.name} illustrative demo category cover; not a photograph of actual inventory` : `${c.name} collection product photograph`,
+    width: 1200, height: 1500, placeholder: false, fit: "cover",
+  }),
   product: (p: Product): ImageAsset =>
-    p.kind === "concept" ? conceptImages[p.id] : figurePhotos[p.id],
-  gallery: (p: Product): ImageAsset[] => [
+    p.kind === "reference" ? { id: p.id, ...p.images[0], alt: `${p.character} — ${p.name}; original product photograph from ${p.source.label}`, placeholder: false, fit: "contain" } : p.kind === "concept" ? conceptImages[p.id] : figurePhotos[p.id],
+  gallery: (p: Product): ImageAsset[] => p.kind === "reference" ? p.images.map((image,index) => ({ id: `${p.id}-${index}`, ...image, alt: `${p.name}, source product photograph ${index + 1}`, placeholder: false, fit: "contain" })) : [
     p.kind === "concept" ? conceptImages[p.id] : figurePhotos[p.id],
   ],
 };

@@ -10,7 +10,13 @@ export type PaymentStatus = "PENDING" | "PAID" | "FAILED" | "REFUNDED";
 
 export type PaymentMethod = "COD" | "BKASH" | "NAGAD" | "CARD";
 
+export type CategoryKind = "PRODUCT_TYPE" | "FRANCHISE";
+export type FranchiseFamily = "ANIME" | "MARVEL" | "DC" | "MOVIES" | "OTHER";
+
 export interface CategoryDto {
+  kind?: CategoryKind;
+  family?: FranchiseFamily | null;
+  imageIsDemo?: boolean;
   id: string;
   name: string;
   slug: string;
@@ -49,6 +55,8 @@ export interface ProductDto {
   currency: string;
   categoryId: string;
   category?: CategoryDto;
+  productTypeId?: string | null;
+  productType?: CategoryDto;
   specifications?: Record<string, string | number | boolean> | null;
   isActive: boolean;
   isFeatured: boolean;

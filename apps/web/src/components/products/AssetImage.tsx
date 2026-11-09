@@ -23,6 +23,7 @@ export function AssetImage({
       {asset.src && !failed ? (
         <Image
           src={asset.src}
+          unoptimized={asset.src.startsWith("https://")}
           alt={asset.alt}
           fill
           sizes={sizes}

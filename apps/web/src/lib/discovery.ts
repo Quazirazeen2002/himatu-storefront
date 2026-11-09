@@ -1,7 +1,9 @@
+import { pricing } from "./pricing";
 import type { Product } from "./types";
 export interface Filters {
   query: string;
   collection: string;
+  category: string;
   minimum: string;
   maximum: string;
   availability: string;
@@ -10,6 +12,7 @@ export interface Filters {
 export const emptyFilters: Filters = {
   query: "",
   collection: "all",
+  category: "all",
   minimum: "",
   maximum: "",
   availability: "all",
@@ -31,20 +34,21 @@ export function discover(catalog: Product[], filters: Filters, sort: string) {
     (p) =>
       matchesSearch(p, filters.query) &&
       (filters.collection === "all" || p.collection === filters.collection) &&
+      (filters.category === "all" || p.productCategory === filters.category) &&
       (filters.availability === "all" ||
         p.availability === filters.availability) &&
       (filters.type === "all" || p.type === filters.type) &&
       (!filters.minimum ||
-        (p.price !== undefined && p.price >= Number(filters.minimum))) &&
+        (p.price !== undefined && pricing(p).current >= Number(filters.minimum))) &&
       (!filters.maximum ||
-        (p.price !== undefined && p.price <= Number(filters.maximum))),
+        (p.price !== undefined && pricing(p).current <= Number(filters.maximum))),
   );
   return result.sort((a, b) => {
     if (sort === "low" || sort === "high") {
       if (a.price === undefined && b.price === undefined) return 0;
       if (a.price === undefined) return 1;
       if (b.price === undefined) return -1;
-      return sort === "low" ? a.price - b.price : b.price - a.price;
+      return sort === "low" ? pricing(a).current - pricing(b).current : pricing(b).current - pricing(a).current;
     }
     return sort === "new"
       ? b.addedAt - a.addedAt

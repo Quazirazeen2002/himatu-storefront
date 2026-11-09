@@ -1,5 +1,5 @@
 import { products } from "./config";
-import { catalogue } from "./catalogue";
+import { catalogue, concepts } from "./catalogue";
 export interface DemoState {
   bag: Record<string, number>;
   wishlist: string[];
@@ -15,7 +15,7 @@ const empty: DemoState = {
 };
 let snapshot: DemoState | undefined;
 const listeners = new Set<() => void>();
-const known = (id: string) => catalogue.some((p) => p.id === id);
+const known = (id: string) => [...catalogue, ...concepts].some((p) => p.id === id);
 const purchasable = (id: string) =>
   products.some((p) => p.id === id && p.availability !== "sold-out");
 export function sanitizeState(value: unknown): DemoState {

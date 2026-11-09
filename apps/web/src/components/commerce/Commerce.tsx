@@ -2,11 +2,12 @@
 import Link from "next/link";
 import { Heart, Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { useStore } from "./StoreProvider";
-import { products, formatPrice } from "@/lib/config";
-import { Button, ButtonLink, DemoNotice, IconButton } from "../ui/Primitives";
+import { formatPrice } from "@/lib/config";
+import { Button, ButtonLink, IconButton } from "../ui/Primitives";
 import { AssetImage } from "../products/AssetImage";
 import { assets } from "@/lib/assets";
-import { getTotals } from "@/lib/demo-store";
+import { pricedTotal } from "@/lib/pricing";
+import { ProductPrice } from "../products/ProductPrice";
 export function WishlistButton({ id }: { id: string }) {
   const store = useStore();
   const selected = store.wishlist.includes(id);
@@ -65,8 +66,8 @@ export function OrderSummary({
 }: {
   checkoutLink?: boolean;
 }) {
-  const { bag, storageAvailable } = useStore();
-  const { subtotal: total, count } = getTotals(bag);
+  const { bag, storageAvailable, pricedProducts } = useStore();
+  const { subtotal: total, count } = pricedTotal(pricedProducts, bag);
   return (
     <aside className="order-summary">
       <h2>Summary</h2>
@@ -98,7 +99,7 @@ export function OrderSummary({
 }
 export function BagItems() {
   const store = useStore();
-  const items = products.filter((p) => store.bag[p.id] > 0);
+  const items = store.pricedProducts.filter((p) => store.bag[p.id] > 0);
   if (!items.length)
     return (
       <div className="empty-state">
@@ -128,8 +129,7 @@ export function BagItems() {
               <Link href={`/products/${p.id}`}>{p.name}</Link>
             </h3>
             <p>
-              {formatPrice(p.price)}{" "}
-              <span className="muted">· Sample price</span>
+              <ProductPrice product={p} />
             </p>
             <QuantitySelector
               quantity={store.bag[p.id]}

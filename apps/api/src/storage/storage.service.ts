@@ -183,10 +183,15 @@ export class StorageService {
   /**
    * Upload an image to Supabase Storage
    */
-  async uploadProductImage(
-    productId: string,
-    file: UploadedFileDto,
-  ): Promise<StoredImageResult> {
+  async uploadProductImage(productId: string, file: UploadedFileDto): Promise<StoredImageResult> {
+    return this.uploadPublicImage(`products/${productId}`, file);
+  }
+
+  async uploadCategoryImage(categoryId: string, file: UploadedFileDto): Promise<StoredImageResult> {
+    return this.uploadPublicImage(`categories/${categoryId}`, file);
+  }
+
+  private async uploadPublicImage(folder: string, file: UploadedFileDto): Promise<StoredImageResult> {
     if (!this.supabaseClient) {
       throw new InternalServerErrorException("Supabase Storage client is not configured");
     }
@@ -210,10 +215,9 @@ export class StorageService {
       );
     }
 
-    const rawExt = extname(file.originalname).toLowerCase();
-    const ext = rawExt || (file.mimetype === "image/png" ? ".png" : file.mimetype === "image/webp" ? ".webp" : ".jpg");
+    const ext = file.mimetype === "image/png" ? ".png" : file.mimetype === "image/webp" ? ".webp" : ".jpg";
     const uniqueFileName = `${randomUUID()}${ext}`;
-    const storagePath = `products/${productId}/${uniqueFileName}`;
+    const storagePath = `${folder}/${uniqueFileName}`;
 
     const { error } = await this.supabaseClient.storage
       .from(this.bucketName)

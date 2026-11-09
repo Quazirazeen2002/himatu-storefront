@@ -1,6 +1,8 @@
 "use client";
+import { pricing } from "@/lib/pricing";
+import { formatWhatsAppOrder, whatsappLink } from "@/lib/whatsapp";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -10,16 +12,16 @@ import {
   Wallet,
   Lock,
   CheckCircle2,
-  ArrowUpRight,
   Package,
   LoaderCircle,
   Clock,
   Sparkles,
-  MapPin,
+  MessageCircle,
+  Copy,
   AlertCircle,
 } from "lucide-react";
 import { useStore } from "./StoreProvider";
-import { products, formatPrice } from "@/lib/config";
+import { formatPrice } from "@/lib/config";
 import { AssetImage } from "../products/AssetImage";
 import { assets } from "@/lib/assets";
 import { Button, ButtonLink, Input } from "../ui/Primitives";
@@ -30,7 +32,6 @@ import {
   createAddress,
   getProducts,
   addCartItem,
-  clearCart,
   createOrder,
   initiatePayment,
 } from "@/lib/commerce-api";
@@ -50,21 +51,21 @@ const SHIPPING_METHODS: ShippingMethod[] = [
     title: "Inside Dhaka Express Courier",
     price: 80,
     time: "1–2 Business Days",
-    description: "Hand-to-hand insured courier with corner-guard protective box.",
+    description: "Estimated local delivery. Confirm the final charge and service with HIMATU.",
   },
   {
     id: "nationwide-standard",
     title: "Outside Dhaka Standard Courier",
     price: 130,
     time: "2–4 Business Days",
-    description: "Priority nationwide shipping across all 64 districts via insured courier.",
+    description: "Estimated delivery outside Dhaka. Confirm service coverage with HIMATU.",
   },
   {
     id: "vault-pickup",
-    title: "HIMATU Collector Vault Pickup",
+    title: "Pickup enquiry",
     price: 0,
-    time: "Ready within 24 Hours",
-    description: "Free in-person pickup from HIMATU Vault (Dhanmondi, Dhaka).",
+    time: "Arrange with HIMATU",
+    description: "Ask our team whether pickup is available and confirm the location.",
   },
 ];
 
@@ -114,8 +115,13 @@ export function CheckoutForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [freeShippingPromo, setFreeShippingPromo] = useState(false);
   const [promoMessage, setPromoMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [orderChannel, setOrderChannel] = useState<"whatsapp" | "website">("whatsapp");
+  const [whatsappDraft, setWhatsappDraft] = useState("");
+  const lastWhatsAppOpen = useRef(0);
+  const [copied, setCopied] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   // Load session & saved addresses
@@ -164,22 +170,22 @@ export function CheckoutForm() {
 
   // Items in bag
   const bagEntries = Object.entries(store.bag).filter(
-    ([id, quantity]) => quantity > 0 && products.some((p) => p.id === id),
+    ([id, quantity]) => quantity > 0 && store.pricedProducts.some((p) => p.id === id),
   );
 
   const cartItems = bagEntries.map(([id, quantity]) => {
-    const product = products.find((p) => p.id === id)!;
+    const product = store.pricedProducts.find((p) => p.id === id)!;
     return {
       product,
       quantity,
-      lineTotal: product.price * quantity,
+      lineTotal: pricing(product).current * quantity,
     };
   });
 
   const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const subtotal = cartItems.reduce((acc, item) => acc + item.lineTotal, 0);
 
-  const isFreeShipping = subtotal >= 15000;
+  const isFreeShipping = subtotal >= 15000 || freeShippingPromo;
   const selectedShipping =
     SHIPPING_METHODS.find((m) => m.id === values.shippingMethod) ||
     SHIPPING_METHODS[0];
@@ -189,6 +195,7 @@ export function CheckoutForm() {
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingPrice);
 
   const handleChange = (key: keyof typeof values, val: string | boolean) => {
+    setWhatsappDraft("");
     setValues((prev) => {
       const next = { ...prev, [key]: val };
       // Auto-adjust shipping method when district changes
@@ -206,6 +213,7 @@ export function CheckoutForm() {
   };
 
   const handleSelectSavedAddress = (addr: AddressDto) => {
+    setWhatsappDraft("");
     setSelectedAddressId(addr.id);
     setValues((prev) => ({
       ...prev,
@@ -224,7 +232,9 @@ export function CheckoutForm() {
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
+    setWhatsappDraft("");
     const clean = promoCode.trim().toUpperCase();
+    setFreeShippingPromo(clean === "FREESHIP");
     if (clean === "HIMATU10" || clean === "BANKAI" || clean === "ANIME") {
       setDiscountPercent(10);
       setPromoMessage("Promo code applied: 10% collector discount active!");
@@ -270,6 +280,23 @@ export function CheckoutForm() {
       return;
     }
 
+    if (orderChannel === "whatsapp") {
+      const now = Date.now();
+      if (now - lastWhatsAppOpen.current < 1500) return;
+      lastWhatsAppOpen.current = now;
+      const message = formatWhatsAppOrder({
+        customer: values,
+        items: cartItems.map(({ product, quantity }) => ({ name: product.name, character: product.character, quantity, unitPrice: pricing(product).current, slug: product.id })),
+        subtotal, discount: discountAmount, shipping: shippingPrice, total: grandTotal,
+        shippingMethod: selectedShipping.title,
+        paymentMethod: values.paymentMethod === "COD" ? "Cash on delivery (subject to confirmation)" : values.paymentMethod === "BKASH" ? "bKash (arrange with HIMATU)" : "Card / bank (arrange with HIMATU)",
+        origin: window.location.origin,
+      });
+      setWhatsappDraft(message);
+      setCopied(false);
+      window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -341,9 +368,9 @@ export function CheckoutForm() {
           )}&orderNumber=${encodeURIComponent(order.orderNumber)}&status=PENDING`,
         );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Checkout submission failed:", err);
-      setServerError(err.message || "Order placement failed. Please verify your details and try again.");
+      setServerError(err instanceof Error ? err.message : "Order placement failed. Please verify your details and try again.");
       setSubmitting(false);
     }
   };
@@ -377,15 +404,15 @@ export function CheckoutForm() {
         <div className="checkout-reassurance-strip">
           <div className="reassurance-item">
             <Lock size={15} />
-            <span>256-Bit SSL Encrypted Checkout</span>
+            <span>Review your order details</span>
           </div>
           <div className="reassurance-item">
             <ShieldCheck size={15} />
-            <span>100% Genuine Japanese Collectibles</span>
+            <span>Confirm edition and availability</span>
           </div>
           <div className="reassurance-item">
             <Truck size={15} />
-            <span>Insured Corner-Protected Packaging</span>
+            <span>Delivery arranged with HIMATU</span>
           </div>
         </div>
 
@@ -396,7 +423,7 @@ export function CheckoutForm() {
             <div>
               <h2 id="contact-heading">CONTACT INFORMATION</h2>
               <p className="card-subtext">
-                Order confirmation and tracking updates will be sent here.
+                Your contact details will be included in your order request.
               </p>
             </div>
           </div>
@@ -565,8 +592,9 @@ export function CheckoutForm() {
                 <textarea
                   id="orderNotes"
                   rows={2}
+                  maxLength={1000}
                   className="checkout-textarea"
-                  placeholder="e.g. Please leave with building security, call upon gate arrival, fragile resin care..."
+                  placeholder="e.g. Call before delivery or leave with building security..."
                   value={values.orderNotes}
                   onChange={(e) => handleChange("orderNotes", e.target.value)}
                   disabled={submitting}
@@ -583,7 +611,7 @@ export function CheckoutForm() {
             <div>
               <h2 id="shipping-method-heading">SHIPPING METHOD</h2>
               <p className="card-subtext">
-                Every collectible is packaged with custom shock-absorbent corner guards.
+                Choose a delivery preference. Charges and timing will be confirmed by HIMATU.
               </p>
             </div>
           </div>
@@ -593,7 +621,7 @@ export function CheckoutForm() {
               const isSelected = values.shippingMethod === method.id;
               const displayPrice =
                 isFreeShipping && method.price > 0 ? (
-                  <span className="free-shipping-tag">FREE (Order &gt; ৳15k)</span>
+                  <span className="free-shipping-tag">FREE (applied)</span>
                 ) : method.price === 0 ? (
                   "FREE"
                 ) : (
@@ -637,7 +665,7 @@ export function CheckoutForm() {
             <div>
               <h2 id="payment-heading">PAYMENT METHOD</h2>
               <p className="card-subtext">
-                Inspect your collectible figure upon arrival and pay cash directly to the courier rider.
+                Choose your preferred payment method. WhatsApp orders are arranged directly with our team.
               </p>
             </div>
           </div>
@@ -660,10 +688,10 @@ export function CheckoutForm() {
                     <Wallet size={17} />
                     <span className="option-title">bKash Direct Checkout</span>
                   </div>
-                  <span className="payment-tag active-tag">INSTANT VERIFICATION</span>
+                  <span className="payment-tag active-tag">PAYMENT PREFERENCE</span>
                 </div>
                 <p className="option-description">
-                  Pay instantly via bKash Merchant Gateway. Direct server-to-server confirmation locks your collectible immediately.
+                  {orderChannel === "whatsapp" ? "Request bKash payment details from HIMATU after availability and the final total are confirmed." : "Continue through the configured bKash checkout flow."}
                 </p>
               </div>
             </label>
@@ -688,7 +716,7 @@ export function CheckoutForm() {
                   <span className="payment-tag active-tag">VISA · MC · AMEX · BANKS</span>
                 </div>
                 <p className="option-description">
-                  Secure hosted payment portal supporting Visa, Mastercard, American Express, and Bangladeshi internet banking portals.
+                  {orderChannel === "whatsapp" ? "Ask HIMATU which card or bank options are available for your order." : "Continue through the configured hosted payment flow."}
                 </p>
               </div>
             </label>
@@ -713,13 +741,23 @@ export function CheckoutForm() {
                   <span className="payment-tag active-tag">PAY AT DOORSTEP</span>
                 </div>
                 <p className="option-description">
-                  Inspect the collectible seal and package condition upon delivery before handing cash in BDT to the courier rider.
+                  Request cash on delivery. Our team will confirm eligibility and delivery arrangements.
                 </p>
               </div>
             </label>
           </div>
         </section>
 
+        <section className="checkout-card checkout-channel" aria-labelledby="order-channel-heading">
+          <h2 id="order-channel-heading">HOW WOULD YOU LIKE TO ORDER?</h2>
+          <label className="option-card"><input type="radio" name="orderChannel" checked={orderChannel === "whatsapp"} onChange={() => setOrderChannel("whatsapp")} /><span><strong>WhatsApp order</strong><small>One message with your bag and delivery details. Review and tap Send in WhatsApp.</small></span></label>
+          <label className="option-card"><input type="radio" name="orderChannel" checked={orderChannel === "website"} onChange={() => setOrderChannel("website")} /><span><strong>Website checkout</strong><small>Continue with the existing account and payment flow.</small></span></label>
+        </section>
+        {whatsappDraft && <section className="checkout-card whatsapp-draft" aria-label="WhatsApp order message" role="status">
+          <h2>YOUR MESSAGE IS READY.</h2><p>WhatsApp opens with your order details. Press Send there to contact HIMATU. Your bag stays saved until the order is confirmed.</p>
+          <pre>{whatsappDraft}</pre><a className="button button--primary" href={whatsappLink(whatsappDraft)} target="_blank" rel="noopener noreferrer">OPEN WHATSAPP <MessageCircle size={16} /></a>
+          <button type="button" className="text-link" onClick={async () => { try { await navigator.clipboard.writeText(whatsappDraft); setCopied(true); } catch { setServerError("Copy is unavailable. Select the message above or use Open WhatsApp."); } }}><Copy size={15} />{copied ? "COPIED" : "COPY MESSAGE"}</button>
+        </section>}
         {/* Submit Action */}
         <div className="checkout-submit-block">
           <Button
@@ -734,8 +772,8 @@ export function CheckoutForm() {
               </>
             ) : (
               <>
-                <Lock size={16} />
-                <span>CONFIRM ORDER · ৳{grandTotal.toLocaleString()} BDT (COD)</span>
+                <MessageCircle size={16} />
+                <span>{orderChannel === "whatsapp" ? "ORDER VIA WHATSAPP" : "CONFIRM ORDER"} · ৳{grandTotal.toLocaleString()} BDT</span>
               </>
             )}
           </Button>
@@ -743,7 +781,7 @@ export function CheckoutForm() {
           <p className="checkout-terms-note">
             By confirming this order, you agree to HIMATU&apos;s{" "}
             <Link href="/terms">Terms of Service</Link> and{" "}
-            <Link href="/privacy">Privacy Policy</Link>. Authenticity and packaging guarantee included.
+            <Link href="/privacy">Privacy Policy</Link>. {orderChannel === "whatsapp" ? "Your name, contact and delivery details will be included in a message to 01797725697. Review it before sending. Stock and delivery estimates require confirmation." : "Please review your order before proceeding."}
           </p>
         </div>
       </form>
@@ -779,7 +817,7 @@ export function CheckoutForm() {
           <form onSubmit={handleApplyPromo} className="promo-input-row">
             <input
               type="text"
-              placeholder="Promo code (e.g. HIMATU10)"
+              placeholder="Promo code"
               value={promoCode}
               onChange={(e) => setPromoCode(e.target.value)}
               className="promo-input"
@@ -846,11 +884,11 @@ export function CheckoutForm() {
           <div className="summary-guarantees">
             <div className="guarantee-row">
               <ShieldCheck size={16} />
-              <span>Official Manufacturer Box &amp; Hologram Seal</span>
+              <span>Confirm packaging and edition with HIMATU</span>
             </div>
             <div className="guarantee-row">
               <Truck size={16} />
-              <span>Double-box corner-guard courier dispatch</span>
+              <span>Delivery details confirmed before dispatch</span>
             </div>
           </div>
         </div>

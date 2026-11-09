@@ -7,9 +7,9 @@ export default function Checkout() {
   return (
     <Container className="page-content checkout-page-wrapper">
       <div className="page-intro checkout-page-intro">
-        <p className="eyebrow">EXPRESS DISPATCH · NATIONWIDE BANGLADESH</p>
+        <p className="eyebrow">YOUR NEXT COLLECTIBLE STARTS HERE</p>
         <h1>CHECKOUT.</h1>
-        <p>Review items, select shipping across Bangladesh, and complete your collectible order.</p>
+        <p>Review your bag and delivery details. Send one order request to HIMATU on WhatsApp, or continue with website checkout.</p>
       </div>
       <CheckoutForm />
     </Container>

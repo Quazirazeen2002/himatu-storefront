@@ -63,6 +63,7 @@ export function ProductManagement() {
     price: 0,
     salePrice: 0,
     categoryId: "",
+    productTypeId: "",
     isActive: true,
     isFeatured: false,
     initialStock: 10,
@@ -152,7 +153,8 @@ export function ProductManagement() {
       description: "",
       price: 0,
       salePrice: 0,
-      categoryId: categories[0]?.id || "",
+      categoryId: categories.find(category => category.kind !== "PRODUCT_TYPE")?.id || "",
+      productTypeId: categories.find(category => category.slug === "action-figures")?.id || "",
       isActive: true,
       isFeatured: false,
       initialStock: 10,
@@ -179,6 +181,7 @@ export function ProductManagement() {
       price: product.price,
       salePrice: product.salePrice || 0,
       categoryId: product.categoryId,
+      productTypeId: product.productTypeId || "",
       isActive: product.isActive,
       isFeatured: product.isFeatured,
       initialStock: product.inventory?.quantity || 0,
@@ -196,6 +199,10 @@ export function ProductManagement() {
     e.preventDefault();
     if (!session?.accessToken) return;
 
+    if (formData.salePrice && formData.salePrice >= formData.price) {
+      showFeedback("error", "The sale price must be lower than the original price.");
+      return;
+    }
     try {
       if (editingProduct) {
         await updateAdminProduct(session.accessToken, editingProduct.id, {
@@ -205,8 +212,9 @@ export function ProductManagement() {
           shortDescription: formData.shortDescription,
           description: formData.description,
           price: formData.price,
-          salePrice: formData.salePrice || undefined,
+          salePrice: formData.salePrice || null,
           categoryId: formData.categoryId,
+          productTypeId: formData.productTypeId || null,
           isActive: formData.isActive,
           isFeatured: formData.isFeatured,
           specifications: formData.specifications,
@@ -220,8 +228,9 @@ export function ProductManagement() {
           shortDescription: formData.shortDescription,
           description: formData.description,
           price: formData.price,
-          salePrice: formData.salePrice || undefined,
+          salePrice: formData.salePrice || null,
           categoryId: formData.categoryId,
+          productTypeId: formData.productTypeId || null,
           isActive: formData.isActive,
           isFeatured: formData.isFeatured,
           initialStock: formData.initialStock,
@@ -487,7 +496,7 @@ export function ProductManagement() {
             >
               All Categories
             </button>
-            {categories.map((c) => (
+            {categories.filter(c => c.kind !== "PRODUCT_TYPE").map((c) => (
               <button
                 key={c.id}
                 type="button"
@@ -874,7 +883,7 @@ export function ProductManagement() {
 
                   <div style={{ flex: 1 }}>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
-                      Anime Category *
+                      Franchise / Universe *
                     </label>
                     <select
                       required
@@ -882,7 +891,7 @@ export function ProductManagement() {
                       onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
                       style={{ width: "100%", height: "40px", padding: "0 12px", border: "1px solid var(--admin-border)", borderRadius: "4px", background: "var(--admin-surface)" }}
                     >
-                      {categories.map((c) => (
+                      {categories.filter(c => c.kind !== "PRODUCT_TYPE").map((c) => (
                         <option key={c.id} value={c.id}>
                           {c.name}
                         </option>
@@ -891,10 +900,11 @@ export function ProductManagement() {
                   </div>
                 </div>
 
+                <label className="field"><span>Product category</span><select value={formData.productTypeId} onChange={event => setFormData({ ...formData, productTypeId:event.target.value })}><option value="">Not assigned</option>{categories.filter(category => category.kind === "PRODUCT_TYPE").map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
                 <div style={{ display: "flex", gap: "16px" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
-                      Price in BDT *
+                      Original Price in BDT *
                     </label>
                     <input
                       type="number"
@@ -909,11 +919,12 @@ export function ProductManagement() {
 
                   <div style={{ flex: 1 }}>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
-                      Sale Price (Optional)
+                      Sale Price — leave blank to remove
                     </label>
                     <input
                       type="number"
-                      min="0"
+                      min="1"
+                      max={formData.price > 1 ? formData.price - 1 : undefined}
                       value={formData.salePrice || ""}
                       onChange={(e) => setFormData({ ...formData, salePrice: Number(e.target.value) })}
                       placeholder="5900"

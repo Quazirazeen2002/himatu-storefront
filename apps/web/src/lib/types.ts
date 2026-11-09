@@ -3,6 +3,7 @@ export interface ProductBase {
   name: string;
   franchise: string;
   collection: string;
+  productCategory?: string;
   character: string;
   description: string;
   color: string;
@@ -10,7 +11,8 @@ export interface ProductBase {
   isNew?: boolean;
   addedAt: number;
   type:
-    "Figure" | "Action figure" | "Collectible figurine" | "Collectible concept";
+    "Figure" | "Action figure" | "Collectible figurine" | "Collectible concept" | "Keychain" | "Display sword" | "T-shirt" | "Pin";
+  photoSource?: { page: string; label: string };
   specifications?: {
     material?: string;
     dimensions?: string;
@@ -21,6 +23,7 @@ export interface ProductBase {
 export interface FigureProduct extends ProductBase {
   kind?: "figure";
   price: number;
+  salePrice?: number | null;
   availability: "in-stock" | "pre-order" | "sold-out";
 }
 export interface ConceptProduct extends ProductBase {
@@ -29,8 +32,18 @@ export interface ConceptProduct extends ProductBase {
   availability?: never;
   specifications?: never;
 }
-export type Product = FigureProduct | ConceptProduct;
+export interface ReferenceProduct extends ProductBase {
+  kind: "reference";
+  price?: never;
+  availability?: never;
+  source: { page: string; label: string };
+  images: { src: string; width: number; height: number }[];
+}
+export type Product = FigureProduct | ConceptProduct | ReferenceProduct;
 export interface Collection {
+  imageUrl?: string | null;
+  imageIsDemo?: boolean;
+  family?: string;
   slug: string;
   name: string;
   caption: string;

@@ -1,4 +1,5 @@
 import "multer";
+import { CategoriesService } from "../categories/categories.service";
 import {
   BadRequestException,
   Body,
@@ -29,6 +30,7 @@ import {
 export class ProductsController {
   constructor(
     @Inject(ProductsService) private readonly productsService: ProductsService,
+    @Inject(CategoriesService) private readonly categories: CategoriesService,
   ) {}
 
   // PUBLIC ENDPOINTS
@@ -38,6 +40,7 @@ export class ProductsController {
     @Query("limit") limit?: string,
     @Query("search") search?: string,
     @Query("category") category?: string,
+    @Query("productType") productType?: string,
     @Query("minPrice") minPrice?: string,
     @Query("maxPrice") maxPrice?: string,
     @Query("sort") sort?: "price_asc" | "price_desc" | "new" | "name",
@@ -48,6 +51,7 @@ export class ProductsController {
       limit: limit ? Number(limit) : undefined,
       search,
       category,
+      productType,
       minPrice: minPrice ? Number(minPrice) : undefined,
       maxPrice: maxPrice ? Number(maxPrice) : undefined,
       sort,
@@ -62,8 +66,9 @@ export class ProductsController {
     @Query("limit") limit?: string,
     @Query("sort") sort?: "price_asc" | "price_desc" | "new" | "name",
   ) {
+    const category = await this.categories.getCategoryBySlug(slug);
     return this.productsService.listPublicProducts({
-      category: slug,
+      ...(category.kind === "PRODUCT_TYPE" ? { productType: slug } : { category: slug }),
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
       sort,
@@ -84,12 +89,14 @@ export class ProductsController {
     @Query("limit") limit?: string,
     @Query("search") search?: string,
     @Query("category") category?: string,
+    @Query("productType") productType?: string,
   ) {
     return this.productsService.listAdminProducts({
       page: page ? Number(page) : undefined,
       limit: limit ? Number(limit) : undefined,
       search,
       category,
+      productType,
     });
   }
 

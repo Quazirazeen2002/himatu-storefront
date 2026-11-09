@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLogo } from "./BrandLogo";
 import { usePathname } from "next/navigation";
 import { ArrowUpRight } from "lucide-react";
 import { Container } from "../ui/Primitives";
@@ -9,6 +10,7 @@ const groups = [
     title: "Explore",
     links: [
       ["Shop all", "/shop"],
+      ["Product Categories", "/categories"],
       ["New Arrivals", "/shop?new=1&sort=new"],
       ["Collections", "/collections"],
       ["Custom 3D Printing", "/3d-printing"],
@@ -41,8 +43,8 @@ export function Footer() {
       <Container>
         <div className="footer-top">
           <div>
-            <Link className="wordmark" href="/">
-              HIMATU
+            <Link className="wordmark" href="/" aria-label="HIMATU home">
+              <BrandLogo signature />
             </Link>
             <p>
               For the love of collecting.

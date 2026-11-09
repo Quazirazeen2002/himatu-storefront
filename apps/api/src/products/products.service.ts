@@ -15,6 +15,7 @@ export interface ListProductsQuery {
   limit?: number;
   search?: string;
   category?: string;
+  productType?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: "price_asc" | "price_desc" | "new" | "name";
@@ -61,6 +62,8 @@ export class ProductsService {
       salePrice: p.salePrice,
       currency: p.currency,
       categoryId: p.categoryId,
+      productTypeId: p.productTypeId ?? null,
+      productType: p.productType ? { id: p.productType.id, name: p.productType.name, slug: p.productType.slug, description: p.productType.description, imageUrl: p.productType.imageUrl, kind: p.productType.kind, family: p.productType.family, imageIsDemo: p.productType.imageIsDemo, isActive: p.productType.isActive, displayOrder: p.productType.displayOrder } : undefined,
       category: p.category
         ? {
             id: p.category.id,
@@ -68,6 +71,9 @@ export class ProductsService {
             slug: p.category.slug,
             description: p.category.description,
             imageUrl: p.category.imageUrl,
+            kind: p.category.kind ?? "FRANCHISE",
+            family: p.category.family ?? "ANIME",
+            imageIsDemo: p.category.imageIsDemo ?? false,
             isActive: p.category.isActive,
             displayOrder: p.category.displayOrder,
           }
@@ -109,6 +115,8 @@ export class ProductsService {
         : { slug: cat };
     }
 
+    if (query.productType?.trim()) where.productType = { slug: query.productType.trim(), kind: "PRODUCT_TYPE" };
+
     if (query.minPrice !== undefined || query.maxPrice !== undefined) {
       where.price = {};
       if (query.minPrice !== undefined) where.price.gte = Number(query.minPrice);
@@ -138,6 +146,7 @@ export class ProductsService {
         orderBy,
         include: {
           category: true,
+          productType: true,
           images: {
             orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
           },
@@ -161,6 +170,7 @@ export class ProductsService {
       where: { slug },
       include: {
         category: true,
+        productType: true,
         images: {
           orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
         },
@@ -208,6 +218,7 @@ export class ProductsService {
         orderBy: [{ createdAt: "desc" }],
         include: {
           category: true,
+          productType: true,
           images: {
             orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
           },
@@ -236,11 +247,15 @@ export class ProductsService {
     salePrice?: number | null;
     currency?: string;
     categoryId: string;
+    productTypeId?: string | null;
     specifications?: Record<string, any> | null;
     isActive?: boolean;
     isFeatured?: boolean;
     initialStock?: number;
   }): Promise<ProductDto> {
+    if (data.salePrice != null && (data.salePrice <= 0 || data.salePrice >= data.price)) {
+      throw new BadRequestException("Sale price must be positive and lower than the original price.");
+    }
     const [existingSlug, existingSku, category] = await Promise.all([
       this.prisma.db.product.findUnique({ where: { slug: data.slug } }),
       this.prisma.db.product.findUnique({ where: { sku: data.sku } }),
@@ -257,6 +272,11 @@ export class ProductsService {
       throw new BadRequestException(`Category with ID '${data.categoryId}' not found`);
     }
 
+    if (category.kind === "PRODUCT_TYPE") throw new BadRequestException("Select a franchise in the franchise field.");
+    if (data.productTypeId) {
+      const productType = await this.prisma.db.category.findUnique({ where: { id: data.productTypeId } });
+      if (!productType || productType.kind !== "PRODUCT_TYPE") throw new BadRequestException("Select a valid product category.");
+    }
     const initialQuantity = Math.max(0, data.initialStock ?? 0);
 
     const created = await this.prisma.db.$transaction(async (tx) => {
@@ -271,6 +291,7 @@ export class ProductsService {
           salePrice: data.salePrice,
           currency: data.currency || "BDT",
           categoryId: data.categoryId,
+          productTypeId: data.productTypeId,
           specifications: data.specifications || undefined,
           isActive: data.isActive ?? true,
           isFeatured: data.isFeatured ?? false,
@@ -289,6 +310,7 @@ export class ProductsService {
         where: { id: product.id },
         include: {
           category: true,
+          productType: true,
           images: true,
           inventory: true,
         },
@@ -309,6 +331,7 @@ export class ProductsService {
       price?: number;
       salePrice?: number | null;
       categoryId?: string;
+      productTypeId?: string | null;
       specifications?: Record<string, any> | null;
       isActive?: boolean;
       isFeatured?: boolean;
@@ -317,6 +340,12 @@ export class ProductsService {
     const product = await this.prisma.db.product.findUnique({ where: { id } });
     if (!product) {
       throw new NotFoundException(`Product not found: ${id}`);
+    }
+
+    const nextPrice = data.price ?? product.price;
+    const nextSalePrice = data.salePrice === undefined ? product.salePrice : data.salePrice;
+    if (nextSalePrice != null && (nextSalePrice <= 0 || nextSalePrice >= nextPrice)) {
+      throw new BadRequestException("Sale price must be positive and lower than the original price.");
     }
 
     if (data.slug && data.slug !== product.slug) {
@@ -346,6 +375,14 @@ export class ProductsService {
       }
     }
 
+    if (data.productTypeId) {
+      const productType = await this.prisma.db.category.findUnique({ where: { id: data.productTypeId } });
+      if (!productType || productType.kind !== "PRODUCT_TYPE") throw new BadRequestException("Select a valid product category.");
+    }
+    if (data.categoryId) {
+      const franchise = await this.prisma.db.category.findUnique({ where: { id: data.categoryId } });
+      if (franchise?.kind === "PRODUCT_TYPE") throw new BadRequestException("Select a franchise in the franchise field.");
+    }
     const updated = await this.prisma.db.product.update({
       where: { id },
       data: {
@@ -357,6 +394,7 @@ export class ProductsService {
         price: data.price,
         salePrice: data.salePrice,
         categoryId: data.categoryId,
+        productTypeId: data.productTypeId,
         specifications:
           data.specifications === null
             ? Prisma.JsonNull
@@ -368,6 +406,7 @@ export class ProductsService {
       },
       include: {
         category: true,
+        productType: true,
         images: {
           orderBy: [{ isPrimary: "desc" }, { sortOrder: "asc" }],
         },
@@ -390,6 +429,7 @@ export class ProductsService {
       data: { isActive: false },
       include: {
         category: true,
+        productType: true,
         images: true,
         inventory: true,
       },

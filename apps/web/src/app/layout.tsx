@@ -1,3 +1,4 @@
+import { MobileShopDock } from "@/components/layout/MobileShopDock";
 import localFont from "next/font/local";
 import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
@@ -72,6 +73,7 @@ export default function RootLayout({
           <Header />
           <main id="main-content">{children}</main>
           <Footer />
+          <MobileShopDock />
         </StoreProvider>
       </body>
     </html>

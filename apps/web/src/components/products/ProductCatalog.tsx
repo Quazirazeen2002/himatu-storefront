@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useState, useMemo, useEffect, useRef, Suspense } from "react";
 import { useSearchParams, usePathname } from "next/navigation";
@@ -9,8 +10,8 @@ import {
   Check,
   RotateCcw,
 } from "lucide-react";
-import { catalogue } from "@/lib/catalogue";
-import { collections, products, availabilityLabel } from "@/lib/config";
+import { categoryKind, asCollection } from "@/lib/taxonomy";
+import { products, availabilityLabel } from "@/lib/config";
 import {
   discover,
   emptyFilters,
@@ -31,18 +32,23 @@ const sortOptions = [
 
 function CatalogContent({
   collection,
+  productCategory,
   wishlist = false,
 }: {
   collection?: string;
+  productCategory?: string;
   wishlist?: boolean;
 }) {
   const params = useSearchParams();
   const pathname = usePathname();
   const store = useStore();
+  const collections = store.categoryRegistry.filter(c => categoryKind(c) === "FRANCHISE").map(asCollection);
+  const productCategories = store.categoryRegistry.filter(c => categoryKind(c) === "PRODUCT_TYPE");
 
   const keys: Record<keyof Filters, string> = {
     query: "q",
     collection: "universe",
+    category: "category",
     minimum: "min",
     maximum: "max",
     availability: "availability",
@@ -57,6 +63,7 @@ function CatalogContent({
   ) as unknown as Filters;
 
   if (collection) filters.collection = collection;
+  if (productCategory) filters.category = productCategory;
 
   const sort = ["featured", "new", "low", "high", "name"].includes(
     params.get("sort") || "",
@@ -128,9 +135,10 @@ function CatalogContent({
   const clear = () => navigate(new URLSearchParams());
 
   const arrivals = params.get("new") === "1";
-  const source = catalogue.filter(
+  const source = store.pricedCatalogue.filter(
     (p) =>
       (!collection || p.collection === collection) &&
+      (!productCategory || p.productCategory === productCategory) &&
       (!wishlist || store.wishlist.includes(p.id)) &&
       (!arrivals || p.isNew),
   );
@@ -159,10 +167,7 @@ function CatalogContent({
   };
 
   // Distinct types and availability
-  const distinctTypes = useMemo(
-    () => [...new Set(catalogue.map((p) => p.type))],
-    [],
-  );
+  const distinctTypes = [...new Set(store.pricedCatalogue.map((p) => p.type))];
 
   const distinctAvailabilities = useMemo(
     () => [...new Set(products.map((p) => p.availability))],
@@ -170,15 +175,13 @@ function CatalogContent({
   );
 
   // Franchise counts for Universe dropdown
-  const universeCounts = useMemo(() => {
-    const counts: Record<string, number> = { all: source.length };
-    for (const c of collections) {
-      counts[c.slug] = source.filter((p) => p.collection === c.slug).length;
-    }
-    return counts;
-  }, [source]);
+  const universeCounts: Record<string, number> = { all: source.length };
+  for (const c of collections) {
+    universeCounts[c.slug] = source.filter((p) => p.collection === c.slug).length;
+  }
 
   // Active filter checks
+  const isCategoryActive = filters.category !== "all" && !productCategory;
   const isUniverseActive = filters.collection !== "all" && !collection;
   const isPriceActive = Boolean(filters.minimum || filters.maximum);
   const isAvailabilityActive = filters.availability !== "all";
@@ -187,6 +190,7 @@ function CatalogContent({
   const isQueryActive = Boolean(filters.query);
 
   const hasAnyFilters =
+    isCategoryActive ||
     isUniverseActive ||
     isPriceActive ||
     isAvailabilityActive ||
@@ -198,7 +202,7 @@ function CatalogContent({
     Object.entries(filters) as [keyof Filters, string][]
   ).filter(
     ([key, value]) =>
-      value !== emptyFilters[key] && !(key === "collection" && collection),
+      value !== emptyFilters[key] && !(key === "collection" && collection) && !(key === "category" && productCategory),
   );
 
   const toggleDropdown = (name: string) => {
@@ -290,9 +294,9 @@ function CatalogContent({
         <input
           id="catalog-search"
           type="search"
-          aria-label="Search figures, characters and stories"
+          aria-label="Search products, characters and stories"
           className="catalog-search-input"
-          placeholder="Search figures, characters and stories (e.g. Luffy, Zoro, Ace)..."
+          placeholder="Search products, characters and stories (e.g. Luffy, Zoro, Ace)..."
           value={filters.query}
           onChange={(e) => update("query", e.target.value)}
         />
@@ -311,6 +315,14 @@ function CatalogContent({
       {/* Luxury Horizontal Filter & Sort Bar */}
       <div className="catalog-bar" ref={dropdownsRef}>
         <div className="catalog-dropdowns-group">
+          {!productCategory && <div className="catalog-dropdown">
+            <button type="button" className={`catalog-dropdown-btn ${isCategoryActive ? "is-active" : ""}`} onClick={() => toggleDropdown("category")} aria-expanded={openDropdown === "category"} aria-haspopup="menu">
+              <span>Category:</span><span className="catalog-btn-value">{productCategories.find(c => c.slug === filters.category)?.name || "All products"}</span><ChevronDown size={13} />
+            </button>
+            {openDropdown === "category" && <div className="catalog-dropdown-menu" role="menu" aria-label="Product categories"><div className="catalog-menu-header">Product category</div><div className="catalog-menu-list">
+              {[{ slug: "all", name: "All products" }, ...productCategories].map(category => <button type="button" role="menuitem" className="catalog-menu-item" key={category.slug} onClick={() => { update("category", category.slug); setOpenDropdown(null); }}><span>{category.name}</span>{filters.category === category.slug && <Check size={14} />}</button>)}
+            </div></div>}
+          </div>}
           {/* 1. Universe / Collection Dropdown */}
           {!collection && (
             <div className="catalog-dropdown">
@@ -332,7 +344,7 @@ function CatalogContent({
               {openDropdown === "universe" && (
                 <div className="catalog-dropdown-menu" role="menu">
                   <div className="catalog-menu-header">
-                    <span>Anime Universe</span>
+                    <span>Franchise / Universe</span>
                     <small>Filter</small>
                   </div>
                   <div className="catalog-menu-list">
@@ -719,7 +731,7 @@ function CatalogContent({
 
         {/* Results Count Text */}
         <span className="catalog-status-text" role="status">
-          Showing {paging.from}–{paging.to} of {paging.total} figures
+          Showing {paging.from}–{paging.to} of {paging.total} products
         </span>
       </div>
 
@@ -728,7 +740,7 @@ function CatalogContent({
         <div className="catalog-chips-row" aria-label="Active filters">
           {activeChips.map(([key, value]) => {
             const label =
-              key === "collection"
+              key === "category" ? productCategories.find(category => category.slug === value)?.name || value : key === "collection"
                 ? collections.find((c) => c.slug === value)?.name || value
                 : key === "availability"
                   ? availabilityLabel[value as keyof typeof availabilityLabel] || value
@@ -781,16 +793,14 @@ function CatalogContent({
                 ? "Keep your favourites close."
                 : arrivals
                   ? "No verified new arrivals yet."
-                  : "No figures in this view."}
+                  : "No products in this view."}
             </h2>
             <p>
               {wishlist && source.length === 0
                 ? "Tap the heart on a figure to save it here."
-                : "Try another character, a wider price range, or fewer filters."}
+                : productCategory && source.length === 0 ? "No products have been added to this category yet. Explore another category or ask HIMATU about an item." : "Try another character, a wider price range, or fewer filters."}
             </p>
-            <Button variant="outline" onClick={clear}>
-              CLEAR ALL FILTERS
-            </Button>
+            {productCategory && source.length === 0 ? <Link href="/categories" className="button button--outline">BROWSE OTHER CATEGORIES</Link> : <Button variant="outline" onClick={clear}>CLEAR ALL FILTERS</Button>}
           </div>
         )}
 
@@ -825,9 +835,7 @@ function CatalogContent({
         )}
 
         <DemoNotice>
-          Original Himatu photography with sample prices; AI concepts are
-          labelled and not for sale. Availability states demonstrate the
-          interface and do not represent actual stock.
+          HIMATU originals and source-attributed product photographs. New reference listings are available for enquiries; confirm stock, edition and final pricing with our team.
         </DemoNotice>
       </div>
     </div>

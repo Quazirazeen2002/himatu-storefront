@@ -27,3 +27,27 @@ Desktop uses a three-column grid and sidebar. Mobile/tablet use the existing foc
 ## Exploration and buyer journey
 
 The header gives direct access to Shop All, Collections, verified New Arrivals and 3D Printing. Product cards lead directly to details; actual figure detail actions retain quantity, persistent demo bag feedback and demo checkout. Concepts retain a wishlist action only. Original-photo galleries keep zoom and accessible image labels. Each current record has one genuine source image or one concept image; additional product views are not fabricated. Recently viewed IDs remain browser-persistent.
+
+## Collectible refinement — 9 November 2026
+
+The catalogue now contains eight existing local figure entries and seven unpriced original AI concepts. Nine-item pagination remains dynamic: the current fifteen entries span nine and six items. Concepts are explicitly not for sale, remain wishlist-compatible and never enter the shopping bag. Four new studies are highlighted in the homepage concept lab.
+
+The owner approved a 15% introductory discount on existing prices. Original prices are unchanged; separate sale prices drive filtering, sorting, product presentation, bag totals and checkout line totals. Admin-managed API prices override local fallbacks by matching slug or exact product name. Clear the admin Sale Price field to remove an offer. No inflated comparison prices were introduced. The existing difference between backend and local catalogue membership remains documented in `design-system.md`.
+
+## Product categories and franchises — 9 November 2026
+
+Product category and franchise are independent dimensions. `/shop?category=action-figures&universe=naruto` combines both; pagination resets when either changes and retains both when moving between pages. Existing `universe` collection URLs remain supported.
+
+The five starting product categories are Action Figures, Keychains, Katanas, T-shirts and Accessories. Anime includes One Piece, Naruto, Dragon Ball, Attack on Titan, Demon Slayer, Bleach, Hunter × Hunter, Solo Leveling, Jujutsu Kaisen, Blue Lock and Death Note. Marvel, DC and Movies have separate family tabs; Other Collections retains original concept studies. `/categories` presents product categories and family entry points. `/collections` defaults to Anime. New active admin entries appear through the live category registry and dynamic detail routes without a rebuild.
+
+Product editing retains the existing franchise assignment and adds a separate product-category assignment. The database migration preserves existing category IDs. The setup script assigned only missing product types and verified unchanged original prices, sale prices, inventory quantities and franchise assignments. It saved a pre-change backup under ignored `output/category-backups/` before applying the initial templates.
+
+The storefront still uses its existing local commerce catalogue with API metadata/price overrides for matching names or slugs. Creating a category provides a browseable category and cover, but does not create products or automatically synchronize newly created backend products into that local catalogue. Empty sectors provide honest empty states. Demo artwork is never purchasable inventory.
+
+Administrators: open **Admin → Categories → Add category or franchise**. Choose the kind, name, slug, description, ordering and visibility; franchises also have a family. Supply an HTTPS/local cover URL or upload JPEG, PNG or WebP (maximum 10 MB), and identify illustrative artwork with the Demo Artwork option. Missing covers use a neutral fallback. Hidden entries remain available in the admin list for restoration. Category kind cannot change while products are assigned. Upload and mutation endpoints require an administrator.
+
+## Real-photo catalogue and enquiries — 9 November 2026
+
+The active shop contains eight existing priced products and seventeen real-photo reference entries (25 total; pages of 9, 9 and 7). Each requested named franchise and product category has at least one entry. References have no invented price or availability and are excluded by price/stock filters when those require confirmed values. They support search, category/franchise filtering, pagination, wishlist, detail galleries and source-linked WhatsApp enquiries. The seven AI concepts retain their direct detail routes but are no longer in the shop catalogue or homepage concept lab.
+
+Quick view provides the same purchase or enquiry actions with fewer navigation steps. Mobile shortcuts expose categories, wishlist and the saved bag. Checkout defaults to a fully formatted WhatsApp order request for the existing priced bag; website checkout remains selectable. See `original-photography-and-whatsapp.md` for the exact message contents and confirmation boundary.

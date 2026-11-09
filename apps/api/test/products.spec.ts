@@ -112,6 +112,22 @@ describe("ProductsService & Inventory Core", () => {
     validateFileSignature: jest.fn(),
   };
 
+  it("rejects a sale price at or above the original price before creation", async () => {
+    await expect(productsService.createProduct({
+      name: "Test figure", slug: "test-figure", sku: "TEST-SALE", description: "Test", price: 6500,
+      salePrice: 7000, categoryId: mockProduct.categoryId,
+    })).rejects.toThrow(BadRequestException);
+  });
+
+  it("rejects changing the original price below an existing sale price", async () => {
+    await expect(productsService.updateProduct(mockProduct.id, { price: 5000 })).rejects.toThrow(BadRequestException);
+  });
+
+  it("allows clearing a discount without changing the original price", async () => {
+    await productsService.updateProduct(mockProduct.id, { salePrice: null });
+    expect(mockPrisma.db.product.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ salePrice: null, price: undefined }) }));
+  });
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [

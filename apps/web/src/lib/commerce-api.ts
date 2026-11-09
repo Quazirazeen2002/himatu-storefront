@@ -1,5 +1,7 @@
 import type {
   CategoryDto,
+  CategoryKind,
+  FranchiseFamily,
   ProductDto,
   ProductImageDto,
   CartDto,
@@ -99,6 +101,7 @@ export interface ProductQuery {
   limit?: number;
   search?: string;
   category?: string;
+  productType?: string;
   minPrice?: number;
   maxPrice?: number;
   sort?: "price_asc" | "price_desc" | "new" | "name";
@@ -119,6 +122,7 @@ export async function getProducts(query: ProductQuery = {}): Promise<PaginatedPr
   if (query.limit) params.set("limit", String(query.limit));
   if (query.search) params.set("search", query.search);
   if (query.category) params.set("category", query.category);
+  if (query.productType) params.set("productType", query.productType);
   if (query.minPrice !== undefined) params.set("minPrice", String(query.minPrice));
   if (query.maxPrice !== undefined) params.set("maxPrice", String(query.maxPrice));
   if (query.sort) params.set("sort", query.sort);
@@ -139,6 +143,7 @@ export async function getAdminProducts(token: string, query: ProductQuery = {}):
   if (query.limit) params.set("limit", String(query.limit));
   if (query.search) params.set("search", query.search);
   if (query.category) params.set("category", query.category);
+  if (query.productType) params.set("productType", query.productType);
 
   const qs = params.toString();
   return request<PaginatedProducts>(`/admin/products${qs ? `?${qs}` : ""}`, { token });
@@ -435,7 +440,7 @@ export async function updateAdminSettings(
 
 export async function createAdminCategory(
   token: string,
-  data: { name: string; slug: string; description?: string; imageUrl?: string; displayOrder?: number },
+  data: { name: string; slug: string; description?: string | null; imageUrl?: string | null; displayOrder?: number; isActive?: boolean; kind?: CategoryKind; family?: FranchiseFamily | null; imageIsDemo?: boolean },
 ): Promise<CategoryDto> {
   return request<CategoryDto>("/admin/categories", {
     method: "POST",
@@ -447,7 +452,7 @@ export async function createAdminCategory(
 export async function updateAdminCategory(
   token: string,
   id: string,
-  data: Partial<{ name: string; slug: string; description?: string; imageUrl?: string; isActive?: boolean; displayOrder?: number }>,
+  data: Partial<{ name: string; slug: string; description?: string | null; imageUrl?: string | null; isActive?: boolean; displayOrder?: number; kind?: CategoryKind; family?: FranchiseFamily | null; imageIsDemo?: boolean }>,
 ): Promise<CategoryDto> {
   return request<CategoryDto>(`/admin/categories/${id}`, {
     method: "PATCH",
@@ -802,3 +807,9 @@ export async function addAdminProductionUpdate(
 
 
 
+
+export async function getAdminCategories(token: string): Promise<CategoryDto[]> { return request<CategoryDto[]>("/admin/categories", { token }); }
+export async function uploadCategoryImage(token: string, id: string, file: File, imageIsDemo = false): Promise<CategoryDto> {
+  const body = new FormData(); body.append("file", file); body.append("imageIsDemo", String(imageIsDemo));
+  return request<CategoryDto>(`/admin/categories/${id}/image`, { method: "POST", body, token });
+}

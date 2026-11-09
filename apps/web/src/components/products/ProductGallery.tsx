@@ -53,7 +53,7 @@ export function ProductGallery({ product }: { product: Product }) {
           <span>
             {product.kind === "concept"
               ? "AI-GENERATED CONCEPT"
-              : "HIMATU PHOTOGRAPHY"}
+              : (product.kind === "reference" || product.photoSource) ? "SOURCE PRODUCT PHOTOGRAPH" : "HIMATU PHOTOGRAPHY"}
           </span>
           <IconButton label="Zoom product image" onClick={() => setZoom(true)}>
             <ZoomIn size={20} />
@@ -95,7 +95,7 @@ export function ProductGallery({ product }: { product: Product }) {
         </div>
       )}
       <p className="demo-note">
-        Authentic Collectible Figurine · Verified & Inspected by HIMATU
+        {product.kind === "concept" ? "Original character exploration · AI-generated concept, not for sale" : (product.kind === "reference" || product.photoSource) ? "Original source product photography · Ask HIMATU about availability" : "The details. The character. Your next focal point. · HIMATU photography"}
       </p>
       <Modal
         open={zoom}

@@ -1,7 +1,13 @@
+"use client";
+import { useState } from "react";
+import { Eye } from "lucide-react";
+import { Modal } from "../ui/Modal";
+import { ProductActions } from "../commerce/ProductActions";
+import { ProductEnquiry } from "./ProductEnquiry";
 import Link from "next/link";
 import type { Product } from "@/lib/types";
 import { CONCEPT_LABEL } from "@/lib/catalogue";
-import { formatPrice } from "@/lib/config";
+import { ProductPrice } from "./ProductPrice";
 import { WishlistButton } from "../commerce/Commerce";
 import { AssetImage } from "./AssetImage";
 import { assets } from "@/lib/assets";
@@ -13,8 +19,9 @@ export function ProductCard({
   product: Product;
   showCommerceMetadata?: boolean;
 }) {
+  const [quickView, setQuickView] = useState(false);
   return (
-    <article className="product-card">
+    <article className={`product-card ${p.kind === "reference" ? "product-card--reference" : ""}`}>
       <div className="product-visual">
         <Link href={`/products/${p.id}`} aria-label={`View ${p.name}`}>
           <AssetImage asset={assets.product(p)} />
@@ -23,26 +30,20 @@ export function ProductCard({
           <WishlistButton id={p.id} />
         </div>
       </div>
+      <button type="button" className="product-quick-view" onClick={() => setQuickView(true)} aria-label={`Quick view ${p.name}`}><Eye size={15} /> QUICK VIEW</button>
       <div className="product-caption">
         <div>
           <h3>
             <Link href={`/products/${p.id}`}>{p.name}</Link>
           </h3>
           <p>
-            {p.franchise} · Official Figurine
+            {p.franchise}
           </p>
         </div>
-        {showCommerceMetadata && (
-          <span className="price">
-            {formatPrice(p.price || 0)}
-          </span>
-        )}
+        {showCommerceMetadata && <ProductPrice product={p} />}
       </div>
-      {showCommerceMetadata && (
-        <p className="availability">
-          In Stock · Ready for Delivery
-        </p>
-      )}
+      {p.kind === "concept" ? <p className="concept-disclosure">{CONCEPT_LABEL}</p> : p.kind === "reference" ? <p className="reference-disclosure">SOURCE PHOTOGRAPH · ENQUIRIES OPEN</p> : showCommerceMetadata && <p className="availability">{availabilityLabel[p.availability]}</p>}
+      {quickView && <Modal open={quickView} onClose={() => setQuickView(false)} title="Quick view" className="product-quick-modal"><div className="product-quick-layout"><AssetImage asset={assets.product(p)} /><div><p className="eyebrow">{p.franchise}</p><h3>{p.name}</h3><ProductPrice product={p} /><p className="product-quick-description">{p.description}</p>{p.kind === "reference" ? <ProductEnquiry product={p} /> : p.kind !== "concept" ? <ProductActions product={p} onAdded={() => setQuickView(false)} /> : <p className="concept-disclosure">{CONCEPT_LABEL}</p>}<Link className="text-link" href={`/products/${p.id}`}>VIEW FULL DETAILS ↗</Link></div></div></Modal>}
     </article>
   );
 }

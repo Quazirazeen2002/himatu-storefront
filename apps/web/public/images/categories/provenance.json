@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-09",
+  "mode": "built-in image_gen",
+  "status": "Illustrative demo artwork, not actual inventory or photographs of franchise merchandise",
+  "prompts": [
+    {
+      "id": "action-figures",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. A single original fantasy action-figure concept: a teal and ivory armored adventurer, full body and base visible, realistically sculpted painted resin appearance."
+    },
+    {
+      "id": "keychains",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. Three unbranded collectible keychains, geometric red enamel crest, miniature silver mechanical charm and a black fabric loop, carefully arranged, realistic metal and enamel."
+    },
+    {
+      "id": "katanas",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An unbranded decorative Japanese katana and its black scabbard on a minimalist dark display stand, realistic steel blade, wrapped burgundy handle, no markings or logos."
+    },
+    {
+      "id": "t-shirts",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An oversized black cotton T-shirt neatly presented front-on with a small original abstract red geometric chest graphic, unbranded, realistic fabric texture, no lettering."
+    },
+    {
+      "id": "accessories",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. A curated arrangement of unbranded enamel collectible pins and small geometric acrylic charms in black, ivory and muted red, premium studio still life."
+    },
+    {
+      "id": "naruto",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional ninja adventurer collectible sculpture wearing indigo layered clothing and a muted amber scarf, wind-swept pose, full figure on stone base. No recognizable existing character."
+    },
+    {
+      "id": "dragon-ball",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional cosmic martial artist collectible sculpture with cropped silver hair, navy and bronze costume and a dramatic grounded combat stance, sculpted energy-like shapes. No recognizable existing character."
+    },
+    {
+      "id": "attack-on-titan",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original miniature monumental walled fortress collectible diorama, weathered stone towers, clouds and an anonymous caped scout silhouette, cinematic sense of scale. No recognizable existing character."
+    },
+    {
+      "id": "demon-slayer",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional wandering swordswoman collectible sculpture in a plum and ivory patterned cloak, poised with one katana and sculpted floral forms, stone base. No recognizable existing character."
+    },
+    {
+      "id": "bleach",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional spirit swordsman collectible sculpture with long charcoal robes, pale bronze armor accents, flowing white fabric and an elegant broad sword, dark base. No recognizable existing character."
+    },
+    {
+      "id": "hunter-x-hunter",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional woodland explorer collectible sculpture, moss-green expedition jacket, tan boots, sculpted leaves and an intricate compass, confident pose on a rocky forest base. No recognizable existing character."
+    },
+    {
+      "id": "solo-leveling",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional shadow knight collectible sculpture in blackened silver armor, midnight blue cape, one narrow violet crystal blade and a broken-stone base. No recognizable existing character."
+    },
+    {
+      "id": "jujutsu-kaisen",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional contemporary occult fighter collectible sculpture with dark teal streetwear, asymmetric ivory talisman accessories and restrained sculpted smoke forms, grounded display pose. No recognizable existing character."
+    },
+    {
+      "id": "blue-lock",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional football striker collectible sculpture in a navy and cyan uniform without logos, dynamic kicking pose with football, small stadium-turf base. No recognizable existing character."
+    },
+    {
+      "id": "death-note",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original gothic desk still-life collectible diorama: closed unlettered black notebook, silver fountain pen, dark sculpted feather and mysterious ivory chess piece. No recognizable existing character."
+    },
+    {
+      "id": "marvel",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. An original fictional optimistic comic-book superhero collectible sculpture with an ivory and deep teal mechanical suit, no insignia, dynamic display pose, detailed mechanical base. No recognizable existing character, no franchise logos."
+    },
+    {
+      "id": "dc",
+      "prompt": "Use case: product-mockup. A premium miniature art-deco cityscape diorama as a generic comic-book collection category cover, no people or characters. Beautiful stepped stone towers, geometric rooftop silhouettes, charcoal and muted burgundy palette, small display plinth, studio softbox lighting, realistic sculpted architectural model, portrait 4:5 composition, generous breathing room, charcoal seamless background. No logos, no text, no identifiable fictional city, no weapons. Illustrative demo artwork, not actual inventory."
+    },
+    {
+      "id": "movies",
+      "prompt": "Use case: product-mockup. Asset: a demo category cover for HIMATU ecommerce, not a photograph of actual inventory. Portrait 4:5 composition, all main objects fully visible, centered with generous breathing room. Charcoal seamless studio background, restrained cinematic softbox lighting, high-detail premium collectible presentation. No readable text, no brand marks, no watermark, no packaging, no collage. A premium miniature cinema-inspired display diorama with an unbranded retro film camera, blank clapperboard and a generic futuristic exploration helmet, realistic materials, no franchise logos."
+    }
+  ]
+}

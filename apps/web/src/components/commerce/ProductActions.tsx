@@ -5,7 +5,7 @@ import type { FigureProduct } from "@/lib/types";
 import { useStore } from "./StoreProvider";
 import { QuantitySelector, WishlistButton } from "./Commerce";
 import { Button } from "../ui/Primitives";
-export function ProductActions({ product }: { product: FigureProduct }) {
+export function ProductActions({ product, onAdded }: { product: FigureProduct; onAdded?: () => void }) {
   const [quantity, setQuantity] = useState(1);
   const store = useStore();
   const router = useRouter();
@@ -13,6 +13,7 @@ export function ProductActions({ product }: { product: FigureProduct }) {
   const remaining = 10 - (store.bag[product.id] || 0);
   const add = (buy = false) => {
     store.setQuantity(product.id, (store.bag[product.id] || 0) + quantity);
+    onAdded?.();
     if (buy) router.push("/checkout");
     else store.setDrawer("bag");
   };
