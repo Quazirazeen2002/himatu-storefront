@@ -1,4 +1,6 @@
 "use client";
+import { StockStatus } from "./StockStatus";
+import { useStore } from "../commerce/StoreProvider";
 import { useState } from "react";
 import { Eye } from "lucide-react";
 import { Modal } from "../ui/Modal";
@@ -11,14 +13,15 @@ import { ProductPrice } from "./ProductPrice";
 import { WishlistButton } from "../commerce/Commerce";
 import { AssetImage } from "./AssetImage";
 import { assets } from "@/lib/assets";
-import { availabilityLabel } from "@/lib/config";
 export function ProductCard({
-  product: p,
+  product,
   showCommerceMetadata = true,
 }: {
   product: Product;
   showCommerceMetadata?: boolean;
 }) {
+  const store = useStore();
+  const p = store.pricedCatalogue.find(item => item.id === product.id) || product;
   const [quickView, setQuickView] = useState(false);
   return (
     <article className={`product-card ${p.kind === "reference" ? "product-card--reference" : ""}`}>
@@ -42,8 +45,8 @@ export function ProductCard({
         </div>
         {showCommerceMetadata && <ProductPrice product={p} />}
       </div>
-      {p.kind === "concept" ? <p className="concept-disclosure">{CONCEPT_LABEL}</p> : p.kind === "reference" ? <p className="reference-disclosure">SOURCE PHOTOGRAPH · ENQUIRIES OPEN</p> : showCommerceMetadata && <p className="availability">{availabilityLabel[p.availability]}</p>}
-      {quickView && <Modal open={quickView} onClose={() => setQuickView(false)} title="Quick view" className="product-quick-modal"><div className="product-quick-layout"><AssetImage asset={assets.product(p)} /><div><p className="eyebrow">{p.franchise}</p><h3>{p.name}</h3><ProductPrice product={p} /><p className="product-quick-description">{p.description}</p>{p.kind === "reference" ? <ProductEnquiry product={p} onAdded={() => setQuickView(false)} /> : p.kind !== "concept" ? <ProductActions product={p} onAdded={() => setQuickView(false)} /> : <p className="concept-disclosure">{CONCEPT_LABEL}</p>}<Link className="text-link" href={`/products/${p.id}`}>VIEW FULL DETAILS ↗</Link></div></div></Modal>}
+      {showCommerceMetadata && <StockStatus product={p} />}
+      {quickView && <Modal open={quickView} onClose={() => setQuickView(false)} title="Quick view" className="product-quick-modal"><div className="product-quick-layout"><AssetImage asset={assets.product(p)} /><div><p className="eyebrow">{p.franchise}</p><h3>{p.name}</h3><ProductPrice product={p} />{p.kind !== "concept" && <StockStatus product={p} />}{p.kind === "reference" ? <ProductEnquiry product={p} onAdded={() => setQuickView(false)} /> : p.kind !== "concept" ? <ProductActions product={p} onAdded={() => setQuickView(false)} /> : <p className="concept-disclosure">{CONCEPT_LABEL}</p>}<Link className="text-link" href={`/products/${p.id}`}>VIEW FULL DETAILS ↗</Link></div></div></Modal>}
     </article>
   );
 }

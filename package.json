@@ -10,7 +10,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "npm run dev -w @himatu/web --",
+    "dev": "node scripts/dev.mjs",
     "dev:api": "npm run dev -w @himatu/api",
     "start": "npm run start -w @himatu/web --",
     "start:api": "npm run start -w @himatu/api",
@@ -20,7 +20,8 @@
     "test": "npm run build -w @himatu/shared && npm run generate -w @himatu/api && npm run test --workspaces --if-present",
     "db:generate": "npm run generate -w @himatu/api",
     "db:migrate": "npm run migrate -w @himatu/api",
-    "db:status": "npm run migrate:status -w @himatu/api"
+    "db:status": "npm run migrate:status -w @himatu/api",
+    "dev:web": "npm run dev -w @himatu/web --"
   },
   "devDependencies": {
     "jest": "29.7.0",

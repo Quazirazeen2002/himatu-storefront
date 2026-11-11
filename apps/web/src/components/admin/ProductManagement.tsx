@@ -1,7 +1,7 @@
 "use client";
 
+import { ProductSpecificationsEditor } from "./ProductSpecificationsEditor";
 import { useEffect, useState, useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
 import {
   Package,
@@ -18,8 +18,6 @@ import {
   AlertCircle,
   X,
   RefreshCw,
-  Sparkles,
-  ExternalLink,
 } from "lucide-react";
 import { authService, CustomerSession } from "@/lib/auth-service";
 import {
@@ -34,7 +32,8 @@ import {
   reorderProductImages,
   deleteProductImage,
 } from "@/lib/commerce-api";
-import type { CategoryDto, ProductDto, ProductImageDto } from "@himatu/shared";
+import { CreateProductSchema, UpdateProductSchema, type CategoryDto, type ProductDto } from "@himatu/shared";
+import { slugForProductName } from "@/lib/product-form";
 
 export function ProductManagement() {
   const [session, setSession] = useState<CustomerSession | null>(null);
@@ -68,15 +67,18 @@ export function ProductManagement() {
     isFeatured: false,
     initialStock: 10,
     specifications: {
-      Scale: "1/8 Scale",
-      Height: "24 cm",
-      Material: "PVC & ABS",
-      Series: "Anime Collectible",
-      Manufacturer: "Official",
+      Scale: "",
+      Height: "",
+      Material: "",
+      Series: "",
+      Manufacturer: "",
     } as Record<string, string>,
   });
 
   const [stockInput, setStockInput] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [creationFiles, setCreationFiles] = useState<File[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -90,11 +92,11 @@ export function ProductManagement() {
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const loadData = async (token: string) => {
+  const loadData = async (token: string, requestedPage = page) => {
     try {
       const [prodRes, catRes] = await Promise.all([
         getAdminProducts(token, {
-          page,
+          page: requestedPage,
           limit: 15,
           search: search.trim() || undefined,
           category: categoryFilter || undefined,
@@ -107,13 +109,10 @@ export function ProductManagement() {
       setTotalCount(prodRes.total);
       setCategories(catRes);
 
-      if (managingImagesProduct) {
-        const refreshed = prodRes.items.find((p) => p.id === managingImagesProduct.id);
-        if (refreshed) setManagingImagesProduct(refreshed);
-      }
-    } catch (err: any) {
+      setManagingImagesProduct(current => current ? prodRes.items.find(product => product.id === current.id) || current : null);
+    } catch (err) {
       console.error("Failed to load products:", err);
-      showFeedback("error", err.message || "Failed to load product catalogue.");
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Failed to load product catalogue.");
     }
   };
 
@@ -122,7 +121,7 @@ export function ProductManagement() {
       try {
         const s = await authService.getSession();
         setSession(s);
-        if (s?.accessToken && s.user.role === "ADMIN") {
+        if (s?.accessToken && ["ADMIN", "MODERATOR"].includes(s.user.role)) {
           await loadData(s.accessToken);
         }
       } catch (err) {
@@ -138,17 +137,20 @@ export function ProductManagement() {
     e.preventDefault();
     if (session?.accessToken) {
       setPage(1);
-      loadData(session.accessToken);
+      loadData(session.accessToken, 1);
     }
   };
 
   // Open Create Modal
   const openCreate = () => {
     setEditingProduct(null);
+    setFormError(null);
+    setUploadError(null);
+    setCreationFiles([]);
     setFormData({
       name: "",
       slug: "",
-      sku: `HMT-${Date.now().toString().slice(-4)}`,
+      sku: `HMT-${crypto.randomUUID().slice(0, 8).toUpperCase()}`,
       shortDescription: "",
       description: "",
       price: 0,
@@ -159,11 +161,11 @@ export function ProductManagement() {
       isFeatured: false,
       initialStock: 10,
       specifications: {
-        Scale: "1/8 Scale",
-        Height: "24 cm",
-        Material: "PVC & ABS",
-        Series: "Anime Collectible",
-        Manufacturer: "Official",
+        Scale: "",
+        Height: "",
+        Material: "",
+        Series: "",
+        Manufacturer: "",
       },
     });
     setIsCreateModalOpen(true);
@@ -172,6 +174,8 @@ export function ProductManagement() {
   // Open Edit Modal
   const openEdit = (product: ProductDto) => {
     setEditingProduct(product);
+    setFormError(null);
+    setCreationFiles([]);
     setFormData({
       name: product.name,
       slug: product.slug,
@@ -185,10 +189,10 @@ export function ProductManagement() {
       isActive: product.isActive,
       isFeatured: product.isFeatured,
       initialStock: product.inventory?.quantity || 0,
-      specifications: (product.specifications as Record<string, string>) || {
-        Scale: "1/8 Scale",
-        Height: "24 cm",
-        Material: "PVC & ABS",
+      specifications: (product.specifications ? Object.fromEntries(Object.entries(product.specifications).map(([key, value]) => [key, String(value)])) : null) || {
+        Scale: "",
+        Height: "",
+        Material: "",
       },
     });
     setIsCreateModalOpen(true);
@@ -197,18 +201,24 @@ export function ProductManagement() {
   // Submit Product Form
   const handleProductSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!session?.accessToken) return;
+    if (saving) return;
+    if (!session?.accessToken) { setFormError("Your session has expired. Sign in again before saving."); return; }
+    setFormError(null);
+    const validated = (editingProduct ? UpdateProductSchema : CreateProductSchema).safeParse({ ...formData, name: formData.name.trim(), slug: formData.slug.trim(), sku: formData.sku.trim(), description: formData.description.trim(), salePrice: formData.salePrice || null, productTypeId: formData.productTypeId || null });
+    if (!validated.success) { setFormError(validated.error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join(" · ")); return; }
 
     if (formData.salePrice && formData.salePrice >= formData.price) {
-      showFeedback("error", "The sale price must be lower than the original price.");
+      setFormError("The sale price must be lower than the original price.");
       return;
     }
+    setSaving(true);
     try {
+      let savedProduct: ProductDto;
       if (editingProduct) {
-        await updateAdminProduct(session.accessToken, editingProduct.id, {
-          name: formData.name,
-          slug: formData.slug,
-          sku: formData.sku,
+        savedProduct = await updateAdminProduct(session.accessToken, editingProduct.id, {
+          name: formData.name.trim(),
+          slug: formData.slug.trim(),
+          sku: formData.sku.trim(),
           shortDescription: formData.shortDescription,
           description: formData.description,
           price: formData.price,
@@ -221,10 +231,10 @@ export function ProductManagement() {
         });
         showFeedback("success", `Updated product "${formData.name}" successfully.`);
       } else {
-        await createAdminProduct(session.accessToken, {
-          name: formData.name,
-          slug: formData.slug,
-          sku: formData.sku,
+        savedProduct = await createAdminProduct(session.accessToken, {
+          name: formData.name.trim(),
+          slug: formData.slug.trim(),
+          sku: formData.sku.trim(),
           shortDescription: formData.shortDescription,
           description: formData.description,
           price: formData.price,
@@ -239,11 +249,27 @@ export function ProductManagement() {
         showFeedback("success", `Created new collectible "${formData.name}".`);
       }
 
+      if (creationFiles.length) {
+        const fd = new FormData();
+        creationFiles.forEach(file => fd.append("files", file));
+        try {
+          const images = await uploadProductImages(session.accessToken, savedProduct.id, fd);
+          savedProduct = { ...savedProduct, images: [...(savedProduct.images || []), ...images] };
+        } catch (error) {
+          setManagingImagesProduct(savedProduct);
+          setUploadError(error instanceof Error ? error.message : "Photographs could not be uploaded. Retry here; the product is already saved.");
+          showFeedback("error", "Product saved, but photograph upload failed. Retry in the photograph panel.");
+        }
+      } else if (!editingProduct) {
+        setManagingImagesProduct(savedProduct);
+      }
       setIsCreateModalOpen(false);
+      setCreationFiles([]);
+      window.dispatchEvent(new Event("himatu:catalogue-updated"));
       await loadData(session.accessToken);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to save product.");
-    }
+    } catch (err) {
+      setFormError((err instanceof Error ? err.message : "") || "Failed to save product.");
+    } finally { setSaving(false); }
   };
 
   // Archive Product
@@ -257,8 +283,8 @@ export function ProductManagement() {
       await archiveAdminProduct(session.accessToken, product.id);
       showFeedback("success", `Archived "${product.name}".`);
       await loadData(session.accessToken);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to archive product.");
+    } catch (err) {
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Failed to archive product.");
     }
   };
 
@@ -277,28 +303,35 @@ export function ProductManagement() {
       showFeedback("success", `Inventory updated for ${adjustingStockProduct.name} to ${stockInput} units.`);
       setAdjustingStockProduct(null);
       await loadData(session.accessToken);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to adjust inventory.");
+    } catch (err) {
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Failed to adjust inventory.");
     }
   };
 
   // Upload Images
   const handleFileUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0 || !managingImagesProduct || !session?.accessToken) return;
+    if (!files || files.length === 0 || !managingImagesProduct || !session?.accessToken || uploadingImages) return;
+    if (files.length > 10 || Array.from(files).some(file => !["image/jpeg", "image/png", "image/webp"].includes(file.type) || file.size > 10 * 1024 * 1024)) {
+      setUploadError("Choose up to 10 JPEG, PNG or WebP photographs, no larger than 10MB each.");
+      return;
+    }
     setUploadingImages(true);
     setUploadError(null);
 
     try {
       const fileArray = Array.from(files);
       const fd = new FormData();
-      fileArray.forEach((file) => fd.append("images", file));
+      fileArray.forEach((file) => fd.append("files", file));
 
-      await uploadProductImages(session.accessToken, managingImagesProduct.id, fd);
+      const uploaded = await uploadProductImages(session.accessToken, managingImagesProduct.id, fd);
+      setManagingImagesProduct({ ...managingImagesProduct, images: [...(managingImagesProduct.images || []), ...uploaded] });
+      window.dispatchEvent(new Event("himatu:catalogue-updated"));
       showFeedback("success", `Uploaded ${fileArray.length} photograph(s) to Supabase Storage.`);
       await loadData(session.accessToken);
-    } catch (err: any) {
-      setUploadError(err.message || "Upload failed. Please check image format & size.");
-      showFeedback("error", err.message || "Upload failed");
+    } catch (err) {
+      setUploadError((err instanceof Error ? err.message : "") || "Upload failed. Please check image format & size.");
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Upload failed");
+      await loadData(session.accessToken);
     } finally {
       setUploadingImages(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -314,8 +347,8 @@ export function ProductManagement() {
       });
       showFeedback("success", "Primary cover photograph updated.");
       await loadData(session.accessToken);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to set primary image");
+    } catch (err) {
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Failed to set primary image");
     }
   };
 
@@ -328,8 +361,8 @@ export function ProductManagement() {
       await deleteProductImage(session.accessToken, managingImagesProduct.id, imageId);
       showFeedback("success", "Photograph deleted.");
       await loadData(session.accessToken);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to delete photograph");
+    } catch (err) {
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Failed to delete photograph");
     }
   };
 
@@ -352,8 +385,8 @@ export function ProductManagement() {
     try {
       await reorderProductImages(session.accessToken, managingImagesProduct.id, items);
       await loadData(session.accessToken);
-    } catch (err: any) {
-      showFeedback("error", err.message || "Failed to reorder images");
+    } catch (err) {
+      showFeedback("error", (err instanceof Error ? err.message : "") || "Failed to reorder images");
     }
   };
 
@@ -361,7 +394,7 @@ export function ProductManagement() {
     return <p style={{ padding: "40px", fontWeight: 700 }}>LOADING PRODUCT CATALOGUE…</p>;
   }
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !["ADMIN", "MODERATOR"].includes(session.user.role)) {
     return (
       <div style={{ padding: "60px 20px", textAlign: "center" }}>
         <AlertCircle size={48} style={{ color: "var(--admin-accent, #d92727)", margin: "0 auto 16px" }} />
@@ -419,7 +452,7 @@ export function ProductManagement() {
       )}
 
       {/* KPI Summary Grid */}
-      <div className="admin-kpi-grid" style={{ gridTemplateColumns: "repeat(4, 1fr)", marginBottom: "20px" }}>
+      <div className="admin-kpi-grid admin-product-kpis" style={{ marginBottom: "20px" }}>
         <div className="admin-kpi-card">
           <div className="admin-kpi-top">
             <span className="admin-kpi-label">Total Catalogue</span>
@@ -522,8 +555,8 @@ export function ProductManagement() {
           </div>
 
           {/* Search Box & Refresh */}
-          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <form onSubmit={handleSearchSubmit} style={{ position: "relative", width: "260px" }}>
+          <div style={{ display: "flex", gap: "8px", alignItems: "center", width: "304px", maxWidth: "100%", minWidth: 0 }}>
+            <form onSubmit={handleSearchSubmit} style={{ position: "relative", flex: 1, minWidth: 0 }}>
               <input
                 type="search"
                 placeholder="Search title, SKU, character…"
@@ -722,7 +755,7 @@ export function ProductManagement() {
                             type="button"
                             className="admin-btn admin-btn--secondary"
                             style={{ height: "30px", padding: "0 10px", fontSize: "11px" }}
-                            onClick={() => setManagingImagesProduct(prod)}
+                            onClick={() => { setUploadError(null); setManagingImagesProduct(prod); }}
                             title="Manage photographs"
                           >
                             <Upload size={12} />
@@ -828,8 +861,9 @@ export function ProductManagement() {
             </div>
 
             <form onSubmit={handleProductSubmit}>
+              {formError && <p role="alert" style={{ margin: "16px 24px", padding: "12px", color: "#b91c1c", background: "#fef2f2", border: "1px solid #fecaca", borderRadius: "4px" }}>{formError}</p>}
               <div className="admin-modal-body" style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                <div style={{ display: "flex", gap: "16px" }}>
+                <div className="admin-product-fields-row" style={{ display: "flex", gap: "16px" }}>
                   <div style={{ flex: 2 }}>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
                       Product Name *
@@ -843,7 +877,7 @@ export function ProductManagement() {
                         setFormData((prev) => ({
                           ...prev,
                           name,
-                          slug: prev.slug || name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+                          slug: slugForProductName(prev.name, prev.slug, name),
                         }));
                       }}
                       placeholder="e.g. Luffy · Gear Five"
@@ -866,7 +900,7 @@ export function ProductManagement() {
                   </div>
                 </div>
 
-                <div style={{ display: "flex", gap: "16px" }}>
+                <div className="admin-product-fields-row" style={{ display: "flex", gap: "16px" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
                       URL Slug *
@@ -901,7 +935,7 @@ export function ProductManagement() {
                 </div>
 
                 <label className="field"><span>Product category</span><select value={formData.productTypeId} onChange={event => setFormData({ ...formData, productTypeId:event.target.value })}><option value="">Not assigned</option>{categories.filter(category => category.kind === "PRODUCT_TYPE").map(category => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
-                <div style={{ display: "flex", gap: "16px" }}>
+                <div className="admin-product-fields-row" style={{ display: "flex", gap: "16px" }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "6px" }}>
                       Original Price in BDT *
@@ -979,6 +1013,15 @@ export function ProductManagement() {
                   />
                 </div>
 
+                <ProductSpecificationsEditor value={formData.specifications} onChange={specifications => setFormData(previous => ({ ...previous, specifications }))} />
+                <label className="field"><span>Product photographs · up to 10</span><input type="file" multiple accept="image/jpeg,image/png,image/webp" onChange={event => {
+                  const files = Array.from(event.target.files || []);
+                  if (files.length > 10 || files.some(file => file.size > 10 * 1024 * 1024 || !["image/jpeg", "image/png", "image/webp"].includes(file.type))) {
+                    showFeedback("error", "Choose up to 10 JPEG, PNG or WebP files, 10MB maximum each.");
+                    event.target.value = "";
+                    setCreationFiles([]);
+                  } else setCreationFiles(files);
+                }} /><span>{creationFiles.length ? creationFiles.map(file => file.name).join(", ") : "The first uploaded photograph becomes the cover. You can reorder images after saving."}</span></label>
                 <div style={{ display: "flex", gap: "24px", paddingTop: "4px" }}>
                   <label style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", fontWeight: 700, cursor: "pointer" }}>
                     <input
@@ -1008,8 +1051,8 @@ export function ProductManagement() {
                 >
                   Cancel
                 </button>
-                <button type="submit" className="admin-btn admin-btn--primary">
-                  {editingProduct ? "Save Changes" : "Create Product"}
+                <button type="submit" disabled={saving} className="admin-btn admin-btn--primary">
+                  {saving ? "Saving…" : editingProduct ? "Save Changes" : "Create Product"}
                 </button>
               </div>
             </form>
@@ -1160,7 +1203,7 @@ export function ProductManagement() {
                     No photographs uploaded yet for this figure.
                   </p>
                 ) : (
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "14px" }}>
+                  <div className="admin-product-photo-grid">
                     {managingImagesProduct.images.map((img, idx) => (
                       <div
                         key={img.id}

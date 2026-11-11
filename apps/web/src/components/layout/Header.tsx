@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { lockBodyScroll } from "@/lib/scroll-lock";
 import { BrandLogo } from "./BrandLogo";
 import { SessionLink } from "../commerce/SessionLink";
 import { ProfileMenu } from "./ProfileMenu";
@@ -19,7 +20,6 @@ import { useEffect, useRef, useState } from "react";
 import { authService, type CustomerSession } from "@/lib/auth-service";
 import { useStore } from "../commerce/StoreProvider";
 import { BagItems } from "../commerce/Commerce";
-import { catalogue } from "@/lib/catalogue";
 import { matchesSearch } from "@/lib/discovery";
 import { categoryKind } from "@/lib/taxonomy";
 import { navigation } from "@/lib/config";
@@ -56,15 +56,16 @@ export function Header() {
     if (!el) return;
     if (store.drawer) {
       if (!el.open) el.showModal();
-      document.body.style.overflow = "hidden";
     } else {
       el.close();
-      document.body.style.overflow = "";
     }
+    if (!store.drawer) return;
+    const unlock = lockBodyScroll();
     return () => {
-      document.body.style.overflow = "";
+      unlock();
+      if (el.open) el.close();
     };
-  }, [store.drawer]);
+  }, [store.drawer, pathname]);
 
   if (pathname?.startsWith("/admin")) {
     return null;
@@ -111,7 +112,7 @@ export function Header() {
                 }}
               >
                 <ShieldCheck size={14} />
-                Admin Dashboard
+                Store Management
               </Link>
             </div>
           )}
@@ -217,7 +218,7 @@ export function Header() {
                 >
                   <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                     <ShieldCheck size={18} />
-                    Admin Dashboard
+                    Store Management
                   </span>
                   <ArrowUpRight size={20} />
                 </Link>
@@ -252,10 +253,10 @@ export function Header() {
                 </button>
               )}
               <p className="demo-note" role="status">
-                {catalogue.filter((p) => matchesSearch(p, query)).length} figures found
+                {store.pricedCatalogue.filter((p) => matchesSearch(p, query)).length} figures found
               </p>
               <div className="search-results">
-                {catalogue
+                {store.pricedCatalogue
                   .filter((p) => matchesSearch(p, query))
                   .map((p) => (
                     <Link
@@ -272,7 +273,7 @@ export function Header() {
                       <ArrowUpRight size={20} />
                     </Link>
                   ))}
-                {!catalogue.some((p) => matchesSearch(p, query)) && (
+                {!store.pricedCatalogue.some((p) => matchesSearch(p, query)) && (
                   <p>No figures found. Try searching by anime or character name.</p>
                 )}
               </div>

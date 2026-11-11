@@ -202,13 +202,7 @@ export async function currentProfile() {
   }
 
   // Graceful fallback from Supabase user session so auth & admin privileges stay fully active
-  const role =
-    user.app_metadata?.role === "ADMIN" ||
-    user.user_metadata?.role === "ADMIN" ||
-    user.email === "razeenjubair10@gmail.com" ||
-    (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL)
-      ? "ADMIN"
-      : "CUSTOMER";
+  const role = "CUSTOMER";
 
   const fallbackUser = {
     id: user.id,

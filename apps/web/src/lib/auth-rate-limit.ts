@@ -4,7 +4,8 @@ export type AuthRateLimitAction =
   | "reset"
   | "verify-otp"
   | "resend-otp"
-  | "update-password";
+  | "update-password"
+  | "admin-email";
 
 export const OTP_RESEND_COOLDOWN_SECONDS = 60;
 
@@ -20,6 +21,7 @@ const POLICIES: Record<AuthRateLimitAction, WindowPolicy> = {
   "verify-otp": { maxAttempts: 5, windowMs: 60_000 },
   "resend-otp": { maxAttempts: 3, windowMs: 15 * 60_000 },
   "update-password": { maxAttempts: 5, windowMs: 60_000 },
+  "admin-email": { maxAttempts: 5, windowMs: 60_000 },
 };
 
 const attemptWindows = new Map<string, number[]>();

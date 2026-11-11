@@ -170,7 +170,7 @@ export function authFailure(
             : `${action}_failed`,
       message:
         action === "sign-in"
-          ? "The email or password is incorrect. Use an account you have already created and verified. There is no shared demo password."
+          ? "The email or password is incorrect. Use an account you have already created and verified."
           : action === "register"
             ? "Registration could not be completed. Check your details and try again."
             : action === "verify-otp"

@@ -66,12 +66,12 @@ const BD_DISTRICTS = [
   "Tangail",
 ];
 
-export function CustomerAccount() {
+export function CustomerAccount({ initialTab = "profile", addAddress = false, returnToCheckout = false }: { initialTab?: "profile" | "addresses"; addAddress?: boolean; returnToCheckout?: boolean }) {
   const [session, setSession] = useState<CustomerSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<
     "profile" | "addresses" | "orders" | "wishlist" | "security"
-  >("profile");
+  >(initialTab);
 
   // Profile Form State
   const [name, setName] = useState("");
@@ -84,14 +84,14 @@ export function CustomerAccount() {
 
   // Address State
   const [addresses, setAddresses] = useState<AddressDto[]>([]);
-  const [showAddAddress, setShowAddAddress] = useState(false);
+  const [showAddAddress, setShowAddAddress] = useState(addAddress);
   const [newRecipient, setNewRecipient] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newDistrict, setNewDistrict] = useState("Dhaka");
   const [newArea, setNewArea] = useState("");
   const [newFullAddress, setNewFullAddress] = useState("");
   const [newPostalCode, setNewPostalCode] = useState("");
-  const [newIsDefault, setNewIsDefault] = useState(false);
+  const [newIsDefault, setNewIsDefault] = useState(returnToCheckout);
   const [addressSaving, setAddressSaving] = useState(false);
   const [addressError, setAddressError] = useState<string | null>(null);
 
@@ -205,6 +205,7 @@ export function CustomerAccount() {
       setNewPostalCode("");
       setNewIsDefault(false);
       setShowAddAddress(false);
+      if (returnToCheckout) router.push("/checkout");
     } catch (err: any) {
       setAddressError(err.message || "Failed to save address.");
     } finally {
@@ -289,13 +290,13 @@ export function CustomerAccount() {
             <p className="account-hero-email">{session.user.email}</p>
             <span
               className={`account-badge-role ${
-                session.user.role === "ADMIN" ? "is-admin" : "is-customer"
+                session.user.role !== "CUSTOMER" ? "is-admin" : "is-customer"
               }`}
             >
-              {session.user.role === "ADMIN" ? (
+              {session.user.role !== "CUSTOMER" ? (
                 <>
                   <ShieldCheck size={13} />
-                  <span>ADMINISTRATOR · PRIVILEGED</span>
+                  <span>{session.user.role === "ADMIN" ? "ADMINISTRATOR" : "MODERATOR"} · STAFF</span>
                 </>
               ) : (
                 <>
@@ -338,18 +339,18 @@ export function CustomerAccount() {
       </div>
 
       {/* 2. Admin Privileges Callout Banner */}
-      {session.user.role === "ADMIN" && (
+      {session.user.role !== "CUSTOMER" && (
         <div className="account-admin-banner">
           <div className="account-admin-info">
             <ShieldCheck size={24} />
             <div className="account-admin-text">
-              <strong>ADMINISTRATOR CONTROLS ENABLED</strong>
+              <strong>{session.user.role} CONTROLS ENABLED</strong>
               <small>Manage catalogue figures, inventory stock, and Supabase image uploads.</small>
             </div>
           </div>
           <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-            <Link href="/admin" className="account-admin-link">
-              <span>Admin Dashboard</span>
+            <Link href={session.user.role === "MODERATOR" ? "/admin/social-orders" : "/admin"} className="account-admin-link">
+              <span>Store Management</span>
               <ArrowRight size={14} />
             </Link>
             <Link
@@ -497,7 +498,7 @@ export function CustomerAccount() {
                   type="text"
                   disabled
                   className="account-input"
-                  value={session.user.role === "ADMIN" ? "Administrator" : "Customer / Collector"}
+                  value={session.user.role === "ADMIN" ? "Administrator" : session.user.role === "MODERATOR" ? "Moderator" : "Customer / Collector"}
                 />
               </div>
             </div>
@@ -527,10 +528,11 @@ export function CustomerAccount() {
       {/* TAB 2: Shipping Addresses */}
       {activeTab === "addresses" && (
         <section className="account-card" aria-label="Shipping addresses">
+          {returnToCheckout && <Link className="checkout-address-link" href="/checkout">← Back to checkout</Link>}
           <div className="account-card-header">
             <div className="account-card-title">
               <h3>Saved Shipping Addresses</h3>
-              <p>Addresses used for nationwide courier delivery and Cash on Delivery in Bangladesh.</p>
+              <p>Manage delivery addresses for your orders.</p>
             </div>
             <button
               type="button"
@@ -547,8 +549,8 @@ export function CustomerAccount() {
           {showAddAddress && (
             <form onSubmit={handleAddAddress} className="account-address-form">
               <div className="account-field">
-                <label>Recipient Name</label>
-                <input
+                <label htmlFor="recipientName">Recipient Name</label>
+                <input id="recipientName" autoFocus={addAddress}
                   type="text"
                   required
                   placeholder="Recipient full name"
@@ -559,8 +561,8 @@ export function CustomerAccount() {
               </div>
 
               <div className="account-field">
-                <label>Mobile Phone (Bangladesh)</label>
-                <input
+                <label htmlFor="recipientPhone">Mobile Phone (Bangladesh)</label>
+                <input id="recipientPhone"
                   type="tel"
                   required
                   placeholder="01XXXXXXXXX"
@@ -571,8 +573,8 @@ export function CustomerAccount() {
               </div>
 
               <div className="account-field">
-                <label>District</label>
-                <select
+                <label htmlFor="recipientDistrict">District</label>
+                <select id="recipientDistrict"
                   className="account-input"
                   value={newDistrict}
                   onChange={(e) => setNewDistrict(e.target.value)}
@@ -586,8 +588,8 @@ export function CustomerAccount() {
               </div>
 
               <div className="account-field">
-                <label>Area / Thana / Sub-district</label>
-                <input
+                <label htmlFor="recipientArea">Area / Thana / Sub-district</label>
+                <input id="recipientArea"
                   type="text"
                   required
                   placeholder="e.g. Dhanmondi, Gulshan, Uttara"
@@ -598,8 +600,8 @@ export function CustomerAccount() {
               </div>
 
               <div className="account-field account-form-full">
-                <label>Full Street Address</label>
-                <input
+                <label htmlFor="recipientAddress">Full Street Address</label>
+                <input id="recipientAddress"
                   type="text"
                   required
                   placeholder="House number, road number, flat/apartment, landmarks"
@@ -610,8 +612,8 @@ export function CustomerAccount() {
               </div>
 
               <div className="account-field">
-                <label>Postal Code (Optional)</label>
-                <input
+                <label htmlFor="recipientPostal">Postal Code (Optional)</label>
+                <input id="recipientPostal"
                   type="text"
                   placeholder="e.g. 1205"
                   className="account-input"

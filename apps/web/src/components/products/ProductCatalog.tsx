@@ -563,7 +563,7 @@ function CatalogContent({
                       setOpenDropdown(null);
                     }}
                   >
-                    <span>All demo states</span>
+                    <span>All availability</span>
                     {filters.availability === "all" && (
                       <Check size={14} className="catalog-item-check" />
                     )}
@@ -835,7 +835,7 @@ function CatalogContent({
         )}
 
         <DemoNotice>
-          HIMATU originals and source-attributed product photographs. New reference listings are available for enquiries; confirm stock, edition and final pricing with our team.
+          Explore the collection. Ask HIMATU about available editions and stock.
         </DemoNotice>
       </div>
     </div>

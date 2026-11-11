@@ -29,9 +29,9 @@ export default function Home() {
           </Reveal>
         </section>
       </Container>
-      <BrandStory />
       <PrintingCampaign />
       <MakingOf />
+      <BrandStory />
     </div>
   );
 }

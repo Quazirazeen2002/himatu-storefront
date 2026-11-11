@@ -70,7 +70,6 @@ export function OrderSummary({
   const { subtotal: total } = pricedTotal(bagProducts, bag);
   const items = bagProducts.filter(p => bag[p.id] > 0);
   const count = items.reduce((sum,p) => sum + bag[p.id], 0);
-  const hasDemoPrices = items.some(p => p.kind === "reference");
   return (
     <aside className="order-summary">
       <h2>Summary</h2>
@@ -88,7 +87,6 @@ export function OrderSummary({
         <strong>Items total</strong>
         <strong>{formatPrice(total)}</strong>
       </div>
-      {hasDemoPrices && <p className="demo-note">Includes demo prices. Confirm the final selling prices with HIMATU through WhatsApp before payment.</p>}
       {checkoutLink && (
         <ButtonLink href="/checkout">PROCEED TO CHECKOUT</ButtonLink>
       )}

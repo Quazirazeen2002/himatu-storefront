@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useState, useRef } from "react";
 import { Eye, EyeOff, ArrowUpRight, LoaderCircle } from "lucide-react";
 import { Button, Input } from "../ui/Primitives";
-import { AssetImage } from "../products/AssetImage";
-import { figurePhotos } from "@/lib/assets";
+import { LogoAssembly } from "../brand/LogoAssembly";
+import { BrandLogo } from "../layout/BrandLogo";
 import { authService } from "@/lib/auth-service";
 import { validate, focusError, type FormErrors } from "@/lib/validation";
 
@@ -65,7 +65,7 @@ export function AuthForm({
             href="/"
             aria-label="HIMATU home"
           >
-            HIMATU
+            <BrandLogo />
           </Link>
           <p className="eyebrow auth-mode">
             {reset
@@ -87,7 +87,7 @@ export function AuthForm({
             <span>
               Your account is protected by email verification.
               <br />
-              Members-only access is enforced on all storefront pages.
+              Browse freely. Sign in when you’re ready to order.
             </span>
           </div>
 
@@ -378,27 +378,8 @@ export function AuthForm({
           </p>
         </div>
       </section>
-      <aside className="customer-auth-editorial" aria-label="HIMATU collection">
-        <div className="auth-editorial-heading">
-          <p className="eyebrow">FOR THE CHARACTERS YOU LOVE</p>
-          <h2>
-            MAKE ROOM.
-            <br />
-            FOR YOUR WORLD.
-          </h2>
-        </div>
-        <div className="auth-photograph">
-          <AssetImage
-            asset={figurePhotos["zoro-asura"]}
-            sizes="(max-width:767px) 85vw, 48vw"
-          />
-        </div>
-        <div className="auth-editorial-caption">
-          <span>ONE PIECE / HIMATU PHOTOGRAPHY</span>
-          <Link href="/collections/one-piece">
-            Explore the collection <ArrowUpRight size={16} />
-          </Link>
-        </div>
+      <aside className="customer-auth-editorial auth-assembly-panel" aria-label="The HIMATU story">
+        <LogoAssembly create={create} />
       </aside>
     </div>
   );

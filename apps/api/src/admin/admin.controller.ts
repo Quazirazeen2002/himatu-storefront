@@ -36,6 +36,7 @@ export class AdminController {
   }
 
   @Get("orders")
+  @Roles("ADMIN", "MODERATOR")
   async listOrders(
     @Query("page") page?: string,
     @Query("limit") limit?: string,
@@ -51,6 +52,7 @@ export class AdminController {
   }
 
   @Patch("orders/:id/status")
+  @Roles("ADMIN", "MODERATOR")
   async updateOrderStatus(
     @Param("id") id: string,
     @Body() body: { status: OrderStatus; reason?: string },

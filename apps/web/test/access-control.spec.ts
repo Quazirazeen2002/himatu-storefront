@@ -21,7 +21,7 @@ jest.mock("@supabase/ssr", () => ({
   })),
 }));
 
-describe("Members-Only Access Control & Route Protection", () => {
+describe("Public Browsing & Purchase Access Control & Route Protection", () => {
   const originalEnv = process.env;
 
   beforeEach(() => {
@@ -42,32 +42,11 @@ describe("Members-Only Access Control & Route Protection", () => {
   });
 
   describe("isPublicRoute classification", () => {
-    it("protects all storefront, discovery, checkout and customer routes", () => {
-      const protectedRoutes = [
-        "/",
-        "/shop",
-        "/collections",
-        "/collections/one-piece",
-        "/collections/naruto",
-        "/products/straw-hat-captain",
-        "/products/zoro-asura",
-        "/bag",
-        "/wishlist",
-        "/account",
-        "/account/orders",
-        "/checkout",
-        "/order-confirmation",
-        "/campaign",
-        "/3d-printing",
-        "/about",
-        "/contact",
-        "/faqs",
-        "/admin",
-      ];
-
-      for (const route of protectedRoutes) {
-        expect(isPublicRoute(route)).toBe(false);
-      }
+    it("protects checkout and private customer/admin routes", () => {
+      for (const path of ["/checkout", "/account", "/account/orders", "/admin", "/admin/products", "/order-confirmation"]) expect(isPublicRoute(path)).toBe(false);
+    });
+    it("allows browsing without an account", () => {
+      for (const path of ["/", "/shop", "/collections/one-piece", "/products/straw-hat-captain", "/bag", "/wishlist", "/3d-printing", "/about"]) expect(isPublicRoute(path)).toBe(true);
     });
 
     it("allows public access only to auth pages, callbacks, and essential assets", () => {
@@ -167,37 +146,12 @@ describe("Members-Only Access Control & Route Protection", () => {
       return new NextRequest(url, { headers });
     }
 
-    it("redirects a signed-out visitor accessing the storefront homepage to /sign-in", async () => {
-      mockUser = null;
-      const req = createRequest("http://localhost:3000/");
-      const res = await proxy(req);
-
-      expect(res.status).toBe(307);
-      expect(res.headers.get("location")).toBe("http://localhost:3000/sign-in");
-    });
-
-    it("redirects a signed-out visitor accessing /shop to /sign-in with next=/shop", async () => {
-      mockUser = null;
-      const req = createRequest("http://localhost:3000/shop");
-      const res = await proxy(req);
-
-      expect(res.status).toBe(307);
-      expect(res.headers.get("location")).toBe(
-        "http://localhost:3000/sign-in?next=%2Fshop",
-      );
-    });
-
-    it("redirects a signed-out visitor accessing a product URL preserving intended destination", async () => {
-      mockUser = null;
-      const req = createRequest(
-        "http://localhost:3000/products/straw-hat-captain",
-      );
-      const res = await proxy(req);
-
-      expect(res.status).toBe(307);
-      expect(res.headers.get("location")).toBe(
-        "http://localhost:3000/sign-in?next=%2Fproducts%2Fstraw-hat-captain",
-      );
+    it("allows signed-out visitors to browse", async () => {
+      for (const path of ["/", "/shop", "/products/straw-hat-captain", "/bag", "/wishlist", "/3d-printing"]) {
+        const res = await proxy(createRequest(`http://localhost:3000${path}`));
+        expect(res.status).toBe(200);
+        expect(res.headers.get("location")).toBeNull();
+      }
     });
 
     it("redirects a signed-out visitor accessing /account to /sign-in", async () => {
@@ -222,17 +176,6 @@ describe("Members-Only Access Control & Route Protection", () => {
       );
     });
 
-    it("redirects a signed-out visitor accessing /3d-printing to /sign-in", async () => {
-      mockUser = null;
-      const req = createRequest("http://localhost:3000/3d-printing");
-      const res = await proxy(req);
-
-      expect(res.status).toBe(307);
-      expect(res.headers.get("location")).toBe(
-        "http://localhost:3000/sign-in?next=%2F3d-printing",
-      );
-    });
-
     it("redirects an authenticated customer whose email is NOT verified to /verify-email", async () => {
       mockUser = {
         id: "cust-1",
@@ -240,7 +183,7 @@ describe("Members-Only Access Control & Route Protection", () => {
         email_confirmed_at: null,
       };
 
-      const req = createRequest("http://localhost:3000/shop");
+      const req = createRequest("http://localhost:3000/checkout");
       const res = await proxy(req);
 
       expect(res.status).toBe(307);
@@ -256,7 +199,7 @@ describe("Members-Only Access Control & Route Protection", () => {
         email_confirmed_at: "2026-11-08T00:00:00Z",
       };
 
-      const req = createRequest("http://localhost:3000/shop", {
+      const req = createRequest("http://localhost:3000/checkout", {
         "himatu-recovery": "1",
       });
       const res = await proxy(req);
@@ -274,7 +217,7 @@ describe("Members-Only Access Control & Route Protection", () => {
         email_confirmed_at: "2026-11-08T00:00:00Z",
       };
 
-      const req = createRequest("http://localhost:3000/shop");
+      const req = createRequest("http://localhost:3000/checkout");
       const res = await proxy(req);
 
       // NextResponse.next() returns status 200 without a redirect location header

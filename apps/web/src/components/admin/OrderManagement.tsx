@@ -1,4 +1,5 @@
 "use client";
+import { InvoiceReview } from "./InvoiceReview";
 
 import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
@@ -77,7 +78,7 @@ export function OrderManagement() {
   useEffect(() => {
     authService.getSession().then((s) => {
       setSession(s);
-      if (s?.accessToken && s.user.role === "ADMIN") {
+      if (s?.accessToken && ["ADMIN", "MODERATOR"].includes(s.user.role)) {
         loadOrders(s.accessToken).finally(() => setLoading(false));
       } else {
         setLoading(false);
@@ -539,7 +540,8 @@ export function OrderManagement() {
               )}
             </div>
 
-            <div className="admin-modal-footer">
+            {session?.user.role === "ADMIN" && session.accessToken && activeOrder && <InvoiceReview key={activeOrder.id} orderId={activeOrder.id} token={session.accessToken}/>}
+              <div className="admin-modal-footer">
               <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setActiveOrder(null)}>
                 Close
               </button>

@@ -140,26 +140,8 @@ describe("Payments Module", () => {
       expect(result.paymentUrl).toContain("provider=BKASH");
     });
 
-    it("initiates SSLCOMMERZ payment with multi-channel checkout session", async () => {
-      const result = await paymentsService.initiatePayment("usr-456", {
-        orderId: "ord-123",
-        provider: "SSLCOMMERZ",
-      });
-
-      expect(result).toBeDefined();
-      expect(result.provider).toBe("SSLCOMMERZ");
-      expect(result.paymentUrl).toBeDefined();
-    });
-
-    it("initiates Cash on Delivery payment directly", async () => {
-      const result = await paymentsService.initiatePayment("usr-456", {
-        orderId: "ord-123",
-        provider: "COD",
-      });
-
-      expect(result.provider).toBe("COD");
-      expect(result.status).toBe("PENDING");
-      expect(result.instructions).toContain("Cash will be collected");
+    it.each(["SSLCOMMERZ", "COD"] as const)("rejects new %s payments because only bKash is enabled", async provider => {
+      await expect(paymentsService.initiatePayment("usr-456", {orderId:"ord-123",provider})).rejects.toThrow("Only bKash is available");
     });
   });
 

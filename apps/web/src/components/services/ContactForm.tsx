@@ -1,6 +1,7 @@
 "use client";
+import { whatsappLink } from "@/lib/whatsapp";
 import { useState } from "react";
-import { Button, Input, DemoNotice } from "../ui/Primitives";
+import { Button, Input } from "../ui/Primitives";
 import { validate, focusError, type FormErrors } from "@/lib/validation";
 export function ContactForm() {
   const [values, setValues] = useState({
@@ -9,7 +10,7 @@ export function ContactForm() {
     message: "",
   });
   const [errors, setErrors] = useState<FormErrors>({});
-  const [status, setStatus] = useState("");
+  const [draft, setDraft] = useState("");
   return (
     <form
       className="contact-form"
@@ -22,20 +23,23 @@ export function ContactForm() {
           message: { label: "Message", required: true, max: 2000 },
         });
         setErrors(next);
-        setStatus("");
+        setDraft("");
         if (Object.keys(next).length) {
           focusError(next);
           return;
         }
-        setStatus(
-          "Message checked locally. It was not sent to HIMATU. Official contact channels will be published when confirmed.",
-        );
+        const message = `*HIMATU — CUSTOMER ENQUIRY*
+Name: ${values.contactName.trim()}
+Email: ${values.contactEmail.trim()}
+
+${values.message.trim()}`;
+        const link = whatsappLink(message);
+        setDraft(link);
+        window.open(link, "_blank", "noopener,noreferrer");
       }}
     >
       <h2>Start a conversation.</h2>
-      <DemoNotice>
-        Form demonstration only. Use example details; no message is transmitted.
-      </DemoNotice>
+      <p>Tell us what you have in mind. Review your message in WhatsApp before sending.</p>
       <Input
         id="contactName"
         label="Name"
@@ -68,12 +72,8 @@ export function ContactForm() {
           </span>
         )}
       </label>
-      <Button>CHECK MESSAGE · DEMO</Button>
-      {status && (
-        <p className="feedback" role="status">
-          {status}
-        </p>
-      )}
+      <Button>CONTINUE IN WHATSAPP</Button>
+      {draft && <p className="feedback" role="status">Your message is ready. <a href={draft} target="_blank" rel="noopener noreferrer">Open WhatsApp to review and send</a>.</p>}
     </form>
   );
 }

@@ -25,7 +25,7 @@ export default function ErrorPage({
         THAT AGAIN.
       </h1>
       <p className="info-body">
-        This view could not load. Your saved demo bag and wishlist remain in
+        This view could not load. Your saved bag and wishlist remain in
         this browser.
       </p>
       <div className="checkout-controls">

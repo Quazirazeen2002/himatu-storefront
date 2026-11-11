@@ -55,6 +55,7 @@ export class PaymentsService {
       callbackUrl?: string;
     },
   ): Promise<PaymentInitiationResultDto> {
+    if (data.provider !== "BKASH") throw new BadRequestException("Only bKash is available for new payments.");
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.orderId);
     const order = await this.prisma.db.order.findFirst({
       where: isUuid ? { id: data.orderId } : { orderNumber: data.orderId },
@@ -95,8 +96,7 @@ export class PaymentsService {
       callbackUrl: data.callbackUrl,
     });
 
-    const paymentMethodMapped =
-      data.provider === "BKASH" ? "BKASH" : data.provider === "SSLCOMMERZ" ? "CARD" : "COD";
+    const paymentMethodMapped = "BKASH";
 
     await this.prisma.db.paymentTransaction.create({
       data: {

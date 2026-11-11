@@ -28,24 +28,9 @@ describe("Route protection and redirect contracts", () => {
       expect(isPublicRoute("/sitemap.xml")).toBe(true);
     });
 
-    it("protects homepage and storefront shopping experience", () => {
-      expect(isPublicRoute("/")).toBe(false);
-      expect(isPublicRoute("/home")).toBe(false);
-      expect(isPublicRoute("/shop")).toBe(false);
-      expect(isPublicRoute("/collections")).toBe(false);
-      expect(isPublicRoute("/collections/one-piece")).toBe(false);
-      expect(isPublicRoute("/products/straw-hat-captain")).toBe(false);
-      expect(isPublicRoute("/bag")).toBe(false);
-      expect(isPublicRoute("/wishlist")).toBe(false);
-      expect(isPublicRoute("/checkout")).toBe(false);
-      expect(isPublicRoute("/order-confirmation")).toBe(false);
-      expect(isPublicRoute("/account")).toBe(false);
-      expect(isPublicRoute("/account/orders")).toBe(false);
-      expect(isPublicRoute("/campaign")).toBe(false);
-      expect(isPublicRoute("/3d-printing")).toBe(false);
-      expect(isPublicRoute("/about")).toBe(false);
-      expect(isPublicRoute("/contact")).toBe(false);
-      expect(isPublicRoute("/admin")).toBe(false);
+    it("allows browsing but protects purchases and private areas", () => {
+      for (const path of ["/", "/shop", "/collections", "/collections/one-piece", "/products/straw-hat-captain", "/bag", "/wishlist", "/3d-printing", "/campaign", "/about", "/contact"]) expect(isPublicRoute(path)).toBe(true);
+      for (const path of ["/checkout", "/checkout/payment-result", "/account", "/account/orders", "/admin", "/admin/products", "/order-confirmation"]) expect(isPublicRoute(path)).toBe(false);
     });
   });
 

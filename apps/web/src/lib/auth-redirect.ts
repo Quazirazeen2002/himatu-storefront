@@ -31,15 +31,14 @@ function normalizePathname(pathname: string): string {
   return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
 }
 
-/**
- * Determines whether a request pathname is accessible without customer authentication.
- * All storefront, product, collection, bag, wishlist, checkout, account, 3D-printing,
- * campaign and admin routes return false (protected).
- */
+/** Browsing is public; purchasing, customer data and administration require login. */
 export function isPublicRoute(pathname: string): boolean {
   const normalized = normalizePathname(pathname);
   if (PUBLIC_EXACT_PATHS.has(normalized)) return true;
-  return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  if (PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) return true;
+  return !["/checkout", "/account", "/admin", "/order-confirmation"].some(
+    (prefix) => normalized === prefix || normalized.startsWith(`${prefix}/`),
+  );
 }
 
 /**

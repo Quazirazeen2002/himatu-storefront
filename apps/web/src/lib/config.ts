@@ -123,22 +123,22 @@ export const information: Record<string, { title: string; body: string }> = {
   },
   contact: {
     title: "LET’S TALK.",
-    body: "Contact details will be published here when confirmed by HIMATU. In the meantime, explore the collection preview.",
+    body: "Talk to HIMATU on WhatsApp at 01714546809 for product enquiries, order assistance and custom 3D printing.",
   },
   faqs: {
     title: "A LITTLE MORE CLARITY.",
-    body: "This is the Stage 2 storefront preview. Products, prices and availability are demonstration content. Shopping interactions are browser demonstrations. Payments and account services are not available.",
+    body: "Find answers about collecting, accounts, ordering and custom 3D printing.",
   },
   privacy: {
     title: "PRIVACY POLICY",
-    body: "The approved privacy policy will be published before launch. This preview does not submit your form entries to a server. Demo bag, wishlist and recently viewed product IDs are stored in this browser. Form entries are never sent to a server.",
+    body: "HIMATU uses the information you provide to manage your account, respond to enquiries and handle order requests. Share only the details needed for your request.",
   },
   terms: {
     title: "TERMS OF USE",
-    body: "The business terms are awaiting approval. This storefront is a design demonstration and does not accept purchases or create accounts.",
+    body: "Browse the collection, save your favourites and review your selections before ordering. You need an account to proceed to checkout.",
   },
   "shipping-returns": {
     title: "SHIPPING & RETURNS",
-    body: "Delivery regions, charges, timelines and return conditions will be confirmed before launch. No shipping or return promises are made in this preview.",
+    body: "Delivery charges and estimated service options appear during checkout. Contact HIMATU about delivery coverage, your exact edition and return eligibility before confirming an order.",
   },
 };

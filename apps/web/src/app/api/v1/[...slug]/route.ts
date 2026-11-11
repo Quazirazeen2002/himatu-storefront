@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  */
 async function forwardToBackend(request: NextRequest, slug: string[]) {
   const apiUrl = process.env.API_URL;
-  if (!apiUrl) return null;
+  const productMutation = (request.method !== "GET" && slug[0] === "admin" && slug[1] === "products") || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff", "content"].includes(slug[1]));
+  if (!apiUrl) return productMutation ? NextResponse.json({ message: slug[0] === "social-orders" ? "Order submission is temporarily unavailable. Please try again shortly." : "This dashboard feature requires the API service. Configure API_URL on the storefront and redeploy." }, { status: 503 }) : null;
 
   try {
     const path = slug.join("/");
@@ -23,7 +24,7 @@ async function forwardToBackend(request: NextRequest, slug: string[]) {
       method: request.method,
       headers,
       cache: "no-store",
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(request.headers.get("content-type")?.startsWith("multipart/form-data") ? 90000 : 10000),
     };
 
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -35,6 +36,7 @@ async function forwardToBackend(request: NextRequest, slug: string[]) {
 
     const responseHeaders = new Headers(response.headers);
     responseHeaders.delete("content-encoding");
+    responseHeaders.delete("content-length");
 
     return new NextResponse(data, {
       status: response.status,
@@ -42,7 +44,9 @@ async function forwardToBackend(request: NextRequest, slug: string[]) {
       headers: responseHeaders,
     });
   } catch {
-    // API backend unreachable, fall through to direct DB fallback
+    // A write may have committed before the connection failed. Never repeat it
+    // through the database fallback or pretend an unsupported image upload worked.
+    if (productMutation) return NextResponse.json({ message: slug[0] === "social-orders" ? "We could not confirm your request. Please try again. Your items remain in your bag." : "The API could not be reached. Refresh to check whether the request completed before retrying." }, { status: 503 });
     return null;
   }
 }
@@ -104,10 +108,7 @@ async function getAuthUser(request: NextRequest) {
     }
 
     const isAdmin =
-      authUser.app_metadata?.role === "ADMIN" ||
-      authUser.user_metadata?.role === "ADMIN" ||
-      email === "owner@himatu.com" ||
-      email === "admin@himatu.com";
+      authUser.app_metadata?.role === "ADMIN";
 
     const inserted = await pool.query(
       `INSERT INTO "UserProfile" (id, "supabaseUserId", "fullName", "email", "role", "createdAt", "updatedAt")
@@ -132,6 +133,12 @@ export async function GET(
   // Try proxy first
   const proxied = await forwardToBackend(request, slug);
   if (proxied) return proxied;
+  // The direct database fallback must preserve the API's administrator boundary.
+  if (slug[0] === "admin" || (request.method !== "GET" && slug[0] === "products")) {
+    const admin = await getAuthUser(request);
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (admin.profile.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const pool = getDbPool();
   if (!pool) {
@@ -784,7 +791,7 @@ export async function GET(
         LEFT JOIN "Category" c ON p."categoryId" = c.id
         LEFT JOIN "Inventory" inv ON p.id = inv."productId"
         LEFT JOIN "ProductImage" img ON p.id = img."productId"
-        WHERE p.slug = $1 OR p.id::text = $1
+        WHERE (p.slug = $1 OR p.id::text = $1) AND p."isActive" = true
         GROUP BY p.id, c.name, c.slug, inv.quantity`,
         [slugOrId]
       );
@@ -1343,6 +1350,12 @@ export async function PATCH(
   // Try proxy first
   const proxied = await forwardToBackend(request, slug);
   if (proxied) return proxied;
+  // The direct database fallback must preserve the API's administrator boundary.
+  if (slug[0] === "admin" || (request.method !== "GET" && slug[0] === "products")) {
+    const admin = await getAuthUser(request);
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (admin.profile.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const pool = getDbPool();
   if (!pool) {
@@ -1515,6 +1528,12 @@ export async function POST(
   const { slug } = await params;
   const proxied = await forwardToBackend(request, slug);
   if (proxied) return proxied;
+  // The direct database fallback must preserve the API's administrator boundary.
+  if (slug[0] === "admin" || (request.method !== "GET" && slug[0] === "products")) {
+    const admin = await getAuthUser(request);
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (admin.profile.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const pool = getDbPool();
   if (!pool) {
@@ -1586,7 +1605,8 @@ export async function POST(
       const auth = await getAuthUser(request);
       if (!auth) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       const body = await request.json();
-      const { addressId, paymentMethod = "COD", customerNotes } = body;
+      const { addressId, paymentMethod = "BKASH", customerNotes } = body;
+      if (paymentMethod !== "BKASH") return NextResponse.json({ error: "Only bKash is available for new orders." }, { status: 400 });
 
       // Address snapshot
       let addressSnapshot = null;
@@ -1653,7 +1673,7 @@ export async function POST(
       const timePart = Date.now().toString(36).toUpperCase().slice(-4);
       const orderNumber = `HMT-${timePart}-${randomPart}`;
 
-      const validPaymentMethod = ["COD", "BKASH", "NAGAD", "CARD"].includes(paymentMethod) ? paymentMethod : "COD";
+      const validPaymentMethod = "BKASH";
       const orderRes = await pool.query(
         `INSERT INTO "Order" (
            id, "orderNumber", "userId", "addressSnapshot", subtotal, "shippingCharge",
@@ -1929,6 +1949,12 @@ export async function DELETE(
   const { slug } = await params;
   const proxied = await forwardToBackend(request, slug);
   if (proxied) return proxied;
+  // The direct database fallback must preserve the API's administrator boundary.
+  if (slug[0] === "admin" || (request.method !== "GET" && slug[0] === "products")) {
+    const admin = await getAuthUser(request);
+    if (!admin) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (admin.profile.role !== "ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
 
   const pool = getDbPool();
   if (!pool) return NextResponse.json({ error: "DB not configured" }, { status: 503 });

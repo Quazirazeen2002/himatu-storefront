@@ -3965,8 +3965,9 @@
 
 .account-input:focus {
   outline: none;
-  border-color: rgba(255, 255, 255, 0.4);
-  background: #000;
+  border-color: var(--foreground);
+  background: var(--background);
+  color: var(--foreground);
 }
 
 .account-input:disabled {
@@ -4333,3 +4334,8 @@
 }
 
 
+
+/* Address fields and browser autofill follow the customer's selected palette. */
+.account-input,.onepage-checkout-main input,.onepage-checkout-main select,.onepage-checkout-main textarea { color-scheme: inherit; caret-color: var(--foreground); }
+.account-input:focus-visible,.onepage-checkout-main input:focus-visible,.onepage-checkout-main select:focus-visible,.onepage-checkout-main textarea:focus-visible { outline: 2px solid var(--foreground); outline-offset: 2px; }
+.account-input:-webkit-autofill,.account-input:-webkit-autofill:hover,.account-input:-webkit-autofill:focus,.onepage-checkout-main input:-webkit-autofill,.onepage-checkout-main input:-webkit-autofill:hover,.onepage-checkout-main input:-webkit-autofill:focus { -webkit-text-fill-color: var(--foreground); caret-color: var(--foreground); box-shadow: 0 0 0 1000px var(--background) inset; }

@@ -16,6 +16,7 @@ import {
   resetSchema,
   passwordSchema,
   profileUpdateSchema,
+  adminEmailChangeSchema,
 } from "@himatu/shared";
 import {
   authConfigured,
@@ -47,11 +48,11 @@ function isProviderLevelResetError(error: {
 }): boolean {
   return Boolean(
     error.code === "email_address_not_authorized" ||
-      error.code === "over_email_send_rate_limit" ||
-      error.code === "over_request_rate_limit" ||
-      error.code === "email_address_invalid" ||
-      error.status === 429 ||
-      (error.status && error.status >= 500),
+    error.code === "over_email_send_rate_limit" ||
+    error.code === "over_request_rate_limit" ||
+    error.code === "email_address_invalid" ||
+    error.status === 429 ||
+    (error.status && error.status >= 500),
   );
 }
 
@@ -142,10 +143,7 @@ export async function POST(
 
     if (action === "sign-in") {
       const value = signInSchema.parse(input);
-      const limit = checkAuthRateLimit(
-        `${clientIp}:${value.email}`,
-        "sign-in",
-      );
+      const limit = checkAuthRateLimit(`${clientIp}:${value.email}`, "sign-in");
       if (!limit.allowed)
         return json(
           {
@@ -212,16 +210,17 @@ export async function POST(
       }
       jar.delete("himatu-recovery");
       jar.delete("himatu-pending-email");
-      await synchronizeCustomerProfile(data.session.access_token);
+      const signedInProfile = await synchronizeCustomerProfile(
+        data.session.access_token,
+      );
       let destination = sanitizeRedirectPath(value.next, "/");
       if (!value.next || value.next === "/") {
-        const isAdmin =
-          data.user?.app_metadata?.role === "ADMIN" ||
-          data.user?.user_metadata?.role === "ADMIN" ||
-          data.user?.email === "razeenjubair10@gmail.com" ||
-          (process.env.ADMIN_EMAIL && data.user?.email === process.env.ADMIN_EMAIL);
+        const isAdmin = ["ADMIN", "MODERATOR"].includes(signedInProfile?.role);
         if (isAdmin) {
-          destination = "/admin";
+          destination =
+            signedInProfile?.role === "MODERATOR"
+              ? "/admin/social-orders"
+              : "/admin";
         }
       }
       return json({ ok: true, redirectTo: destination });
@@ -576,6 +575,88 @@ export async function POST(
       return json({ ok: true, redirectTo: "/sign-in" });
     }
 
+    if (action === "admin-email") {
+      const value = adminEmailChangeSchema.parse(input);
+      const profile = await currentProfile();
+      if (
+        profile.status !== 200 ||
+        !profile.body.ok ||
+        profile.body.user?.role !== "ADMIN"
+      )
+        return json(
+          {
+            ok: false,
+            code: "forbidden",
+            message: "Administrator access is required.",
+          },
+          403,
+        );
+      const identity = await supabase.auth.getUser();
+      const user = identity.data.user;
+      if (identity.error || !user?.email || !user.email_confirmed_at)
+        return json(
+          { ok: false, code: "signed_out", message: "Please sign in again." },
+          401,
+        );
+      const limit = checkAuthRateLimit(`${clientIp}:${user.id}`, "admin-email");
+      if (!limit.allowed)
+        return json(
+          {
+            ok: false,
+            code: "rate_limited",
+            message:
+              "Too many email change attempts. Please wait before trying again.",
+            retryAfterSeconds: limit.retryAfterSeconds,
+          },
+          429,
+        );
+      if (user.email.toLowerCase() === value.email)
+        return json(
+          {
+            ok: false,
+            code: "same_email",
+            message: "Enter a different email address.",
+          },
+          400,
+        );
+      const verified = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: value.currentPassword,
+      });
+      if (verified.error || verified.data.user?.id !== user.id)
+        return json(
+          {
+            ok: false,
+            code: "reauthentication_failed",
+            message: "Your current password could not be verified.",
+          },
+          401,
+        );
+      const redirect = new URL(
+        "/auth/callback?next=%2Fadmin%2Fsettings",
+        process.env.APP_URL || "http://localhost:3000",
+      ).toString();
+      const result = await supabase.auth.updateUser(
+        { email: value.email },
+        { emailRedirectTo: redirect },
+      );
+      if (result.error)
+        return json(
+          {
+            ok: false,
+            code: "email_change_failed",
+            message:
+              "The email change could not be requested. Please check the address or try again later.",
+          },
+          result.error.status === 429 ? 429 : 400,
+        );
+      return json({
+        ok: true,
+        message:
+          "Follow the verification instructions sent by email to complete your address change. Your staff permissions will remain unchanged.",
+      });
+    }
+
     if (action === "profile") {
       const value = profileUpdateSchema.parse(input);
       const {
@@ -627,10 +708,8 @@ export async function POST(
         typeof input?.access_token === "string" ? input.access_token : "";
       const refreshToken =
         typeof input?.refresh_token === "string" ? input.refresh_token : "";
-      const flowType =
-        typeof input?.type === "string" ? input.type : "";
-      const nextParam =
-        typeof input?.next === "string" ? input.next : "/";
+      const flowType = typeof input?.type === "string" ? input.type : "";
+      const nextParam = typeof input?.next === "string" ? input.next : "/";
 
       if (!accessToken || !refreshToken) {
         return json(

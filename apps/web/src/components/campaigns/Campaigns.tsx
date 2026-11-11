@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { SessionLink } from "../commerce/SessionLink";
 import { ArrowUpRight, MoveUpRight } from "lucide-react";
 import { ButtonLink, Container } from "../ui/Primitives";
 import { AssetImage } from "../products/AssetImage";
@@ -12,25 +11,13 @@ export function HeroCampaign() {
       <div className="hero-visual">
         <HeroSlideshow />
         <Reveal className="hero-copy">
-          <p className="eyebrow">
-            <span className="red-mark" /> A WORLD WORTH COLLECTING
-          </p>
           <h1>
             YOUR FANDOM.
             <br />
             YOUR COLLECTION.
           </h1>
-          <p className="hero-description">
-            Discover premium anime figures and collectibles inspired by the
-            characters you love.
-          </p>
           <div className="hero-buttons">
             <ButtonLink href="/shop">SHOP THE COLLECTION</ButtonLink>
-            <SessionLink className="button button--outline" />
-            <Link href="/shop" className="hero-secondary">
-              SHOP ALL FIGURES
-              <ArrowUpRight size={17} />
-            </Link>
           </div>
         </Reveal>
       </div>
@@ -113,7 +100,7 @@ export function PrintingCampaign({
               <div className="process-layers" />
             </div>
             <span className="art-label">
-              PROCESS ILLUSTRATION · PROJECT PHOTOS COMING SOON
+              CUSTOM DESIGN · CONCEPT STUDY
             </span>
             <MoveUpRight className="printing-arrow" size={42} strokeWidth={1} />
           </div>

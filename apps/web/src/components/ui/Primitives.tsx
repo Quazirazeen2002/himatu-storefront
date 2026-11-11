@@ -140,7 +140,7 @@ export function Select({
   );
 }
 export function DemoNotice({
-  children = "Original HIMATU photographs. Prices and availability remain demonstrations; purchases are unavailable.",
+  children = "Find your next collectible. Contact HIMATU for help choosing an edition.",
 }: {
   children?: ReactNode;
 }) {

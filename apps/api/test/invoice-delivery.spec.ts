@@ -1,0 +1,17 @@
+import "reflect-metadata";
+import { ConfigService } from "@nestjs/config";
+import { PrismaService } from "../src/prisma/prisma.service";
+import { SocialOrdersService } from "../src/social-orders/social-orders.service";
+import nodemailer from "nodemailer";
+jest.mock("nodemailer",()=>({__esModule:true,default:{createTransport:jest.fn()}}));
+const sendMail=jest.fn().mockResolvedValue({accepted:["customer@example.com"],messageId:"test-id"});
+const snapshot={number:"HMT-TEST",date:"2026-11-11",customer:{fullName:"Customer",email:"customer@example.com",phone:"01700000000",address:"House",area:"Area",district:"Dhaka"},items:[],subtotal:1000,shippingCharge:80,discountAmount:0,totalAmount:1080,paymentStatus:"PENDING"};
+const invoice={id:"invoice",reviewedAt:new Date("2026-11-11T02:00:00Z"),sentAt:null,sendingAt:null,snapshot,order:{orderStatus:"CONFIRMED",updatedAt:new Date("2026-11-11T01:00:00Z")}};
+const db={orderInvoice:{findUnique:jest.fn(),updateMany:jest.fn(),update:jest.fn()}};
+const config=new ConfigService({SMTP_HOST:"smtp.test",SMTP_USER:"sender@example.com",SMTP_PASSWORD:"test-only",SMTP_PORT:587});
+const service=new SocialOrdersService({db} as unknown as PrismaService,config);
+beforeEach(()=>{jest.clearAllMocks();db.orderInvoice.findUnique.mockResolvedValue(invoice);db.orderInvoice.updateMany.mockResolvedValue({count:1});db.orderInvoice.update.mockResolvedValue({...invoice,sentAt:new Date()});jest.mocked(nodemailer.createTransport).mockReturnValue({sendMail} as never);});
+it("emails only the reviewed snapshot and records provider acceptance",async()=>{await service.sendInvoice("order");expect(sendMail).toHaveBeenCalledWith(expect.objectContaining({to:"customer@example.com",subject:"HIMATU invoice · HMT-TEST"}));expect(db.orderInvoice.update).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({messageId:"test-id"})}));});
+it("requires review and blocks stale or duplicate sends",async()=>{db.orderInvoice.findUnique.mockResolvedValueOnce(null);await expect(service.sendInvoice("order")).rejects.toThrow("Review and approve");db.orderInvoice.findUnique.mockResolvedValueOnce({...invoice,order:{...invoice.order,updatedAt:new Date("2026-11-11T03:00:00Z")}});await expect(service.sendInvoice("order")).rejects.toThrow("Order changed");db.orderInvoice.findUnique.mockResolvedValueOnce({...invoice,sentAt:new Date()});expect(await service.sendInvoice("order")).toMatchObject({alreadySent:true});expect(sendMail).not.toHaveBeenCalled();});
+it("does not send when another sender has claimed the invoice",async()=>{db.orderInvoice.updateMany.mockResolvedValue({count:0});await expect(service.sendInvoice("order")).rejects.toThrow("already in progress");expect(sendMail).not.toHaveBeenCalled();});
+it("requires explicit delivery-log confirmation before unlocking a retry",async()=>{await expect(service.unlockInvoice("order",false)).rejects.toThrow("sender log");expect(db.orderInvoice.updateMany).not.toHaveBeenCalled();});

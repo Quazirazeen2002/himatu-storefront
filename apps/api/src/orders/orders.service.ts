@@ -96,6 +96,7 @@ export class OrdersService {
       customerNotes?: string | null;
     },
   ): Promise<OrderDto> {
+    if (data.paymentMethod && data.paymentMethod !== "BKASH") throw new BadRequestException("Only bKash is available for new orders.");
     // 1. Verify address ownership
     const address = await this.prisma.db.address.findUnique({
       where: { id: data.addressId },
@@ -221,7 +222,7 @@ export class OrdersService {
           currency: "BDT",
           orderStatus: "PENDING",
           paymentStatus: "PENDING",
-          paymentMethod: (data.paymentMethod as any) || "COD",
+          paymentMethod: "BKASH",
           customerNotes: data.customerNotes || null,
           items: {
             create: orderItemsData,

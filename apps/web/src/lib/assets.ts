@@ -93,12 +93,14 @@ export const assets = {
   editorial: [figurePhotos["zoro-asura"], figurePhotos["straw-hat-captain"]],
   collection: (c: Collection): ImageAsset => ({
     id: c.slug, src: c.imageUrl || "/images/categories/category-default.svg",
-    alt: c.imageIsDemo ? `${c.name} illustrative demo category cover; not a photograph of actual inventory` : `${c.name} collection product photograph`,
+    alt: c.imageIsDemo ? `${c.name} illustrated category cover; not a photograph of actual inventory` : `${c.name} collection product photograph`,
     width: 1200, height: 1500, placeholder: false, fit: "cover",
   }),
   product: (p: Product): ImageAsset =>
-    p.kind === "reference" ? { id: p.id, ...p.images[0], alt: `${p.character} — ${p.name}; original product photograph from ${p.source.label}`, placeholder: false, fit: "contain" } : p.kind === "concept" ? conceptImages[p.id] : figurePhotos[p.id],
-  gallery: (p: Product): ImageAsset[] => p.kind === "reference" ? p.images.map((image,index) => ({ id: `${p.id}-${index}`, ...image, alt: `${p.name}, source product photograph ${index + 1}`, placeholder: false, fit: "contain" })) : [
-    p.kind === "concept" ? conceptImages[p.id] : figurePhotos[p.id],
-  ],
+    p.uploadedImages?.length ? { id: p.id, ...p.uploadedImages[0], width: 1200, height: 1500, placeholder: false, fit: "contain" }
+    : p.kind === "reference" ? { id: p.id, ...p.images[0], alt: `${p.character} — ${p.name}; original product photograph from ${p.source.label}`, placeholder: false, fit: "contain" }
+    : (p.kind === "concept" ? conceptImages[p.id] : figurePhotos[p.id]) || { id: p.id, alt: `${p.name} photography coming soon`, width: 1200, height: 1500, placeholder: true },
+  gallery: (p: Product): ImageAsset[] => p.uploadedImages?.length
+    ? p.uploadedImages.map((image, index) => ({ id: `${p.id}-${index}`, ...image, width: 1200, height: 1500, placeholder: false, fit: "contain" }))
+    : p.kind === "reference" ? p.images.map((image,index) => ({ id: `${p.id}-${index}`, ...image, alt: `${p.name}, source product photograph ${index + 1}`, placeholder: false, fit: "contain" })) : [assets.product(p)],
 };

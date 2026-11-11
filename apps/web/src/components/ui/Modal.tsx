@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, type ReactNode } from "react";
+import { lockBodyScroll } from "@/lib/scroll-lock";
 import { X } from "lucide-react";
 import { IconButton } from "./Primitives";
 export function Modal({
@@ -21,10 +22,9 @@ export function Modal({
     if (!dialog) return;
     if (open) {
       if (!dialog.open) dialog.showModal();
-      const previous = document.body.style.overflow;
-      document.body.style.overflow = "hidden";
+      const unlock = lockBodyScroll();
       return () => {
-        document.body.style.overflow = previous;
+        unlock();
         dialog.close();
       };
     }
@@ -36,7 +36,7 @@ export function Modal({
       className={`modal ${className}`}
       style={{ margin: "auto" }}
       aria-label={title}
-      onCancel={onClose}
+      onCancel={event => { event.preventDefault(); onClose(); }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}

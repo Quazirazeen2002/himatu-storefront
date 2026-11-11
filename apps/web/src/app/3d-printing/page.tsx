@@ -75,8 +75,8 @@ export default function Printing() {
             )}
           </div>
           <DemoNotice>
-            Process illustrations only. These are not photographs of completed
-            printing projects or verified production capabilities.
+            Concept studies for custom design inspiration. Each project is reviewed
+            individually before production.
           </DemoNotice>
         </section>
         <section className="section">
@@ -91,12 +91,12 @@ export default function Printing() {
               [
                 "02",
                 "Explore the possibilities",
-                "A future consultation would confirm feasibility, rights and specifications.",
+                "Our team reviews feasibility, rights and specifications for your project.",
               ],
               [
                 "03",
                 "Review a proposal",
-                "Materials, finish, pricing and timing would need approval before production.",
+                "Review materials, finish, pricing and timing with HIMATU before production.",
               ],
             ].map(([number, title, body]) => (
               <article key={number}>
@@ -110,7 +110,7 @@ export default function Printing() {
         <section className="custom-options">
           <h2>Make it personal.</h2>
           <p>
-            Use the inquiry preview to describe preferred dimensions, pose,
+            Use the project form to describe preferred dimensions, pose,
             display arrangement and finish. These are discussion prompts, not a
             promise that every option can be produced.
           </p>
@@ -121,15 +121,15 @@ export default function Printing() {
           {[
             [
               "Can I upload a reference?",
-              "Yes. In this preview, JPEG, PNG and WebP files up to 5 MB can be selected and previewed locally. Nothing is uploaded.",
+              "Yes. Attach up to five JPEG, PNG or WebP reference images, with a maximum of 15MB per file. Sign in to submit and track your request.",
             ],
             [
               "Which materials and sizes are available?",
-              "Materials, dimensions and production options have not been confirmed. Each future project would need a feasibility review.",
+              "Tell us your preferred dimensions, material and finish. HIMATU will review what is feasible for your project.",
             ],
             [
               "How much does a custom creation cost?",
-              "No pricing or turnaround time is confirmed. This form does not request or generate a real quote.",
+              "Submit your project details to request a quotation. Pricing and turnaround depend on the agreed scope.",
             ],
             [
               "Can any character be printed?",

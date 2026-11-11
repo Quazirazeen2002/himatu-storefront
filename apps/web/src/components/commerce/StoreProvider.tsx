@@ -16,13 +16,14 @@ import {
   setQuantity,
   toggleWish,
   markViewed,
+  registerStoreProducts,
   type DemoState,
 } from "@/lib/demo-store";
-import { products } from "@/lib/config";
 import { catalogue } from "@/lib/catalogue";
 import { fallbackCategories } from "@/lib/taxonomy";
 import type { CategoryDto } from "@himatu/shared";
-import { getCategories, getProducts } from "@/lib/commerce-api";
+import { getCategories, getAllProducts } from "@/lib/commerce-api";
+import { mergeStorefrontProducts } from "@/lib/storefront-products";
 import type { Product, FigureProduct, ReferenceProduct } from "@/lib/types";
 
 interface Store extends DemoState {
@@ -50,26 +51,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     refresh(); window.addEventListener("focus", refresh);
     return () => { active = false; window.removeEventListener("focus", refresh); };
   }, []);
-  const [prices, setPrices] = useState<Record<string, { price: number; salePrice: number | null; productCategory?: string; collection?: string; franchise?: string }>>({});
+  const [pricedCatalogue, setCatalogue] = useState<Product[]>(catalogue);
   useEffect(() => {
     let active = true;
-    const refresh = () => getProducts({ limit: 100 }).then(result => {
+    const refresh = () => getAllProducts().then(items => {
       if (!active) return;
-      const next: typeof prices = {};
-      for (const item of result.items) {
-        const match = products.find(product => product.id === item.slug || product.name === item.name);
-        if (match && Number.isSafeInteger(item.price) && item.price > 0) {
-          next[match.id] = { price: item.price, salePrice: item.salePrice, productCategory: item.productType?.slug || match.productCategory, collection: item.category?.slug || match.collection, franchise: item.category?.name || match.franchise };
-        }
-      }
-      setPrices(next);
-    }).catch(() => { /* Keep existing catalogue prices when the API is unavailable. */ });
+      const next = mergeStorefrontProducts(items);
+      registerStoreProducts(next);
+      setCatalogue(next);
+    }).catch(() => { /* Keep the last usable catalogue during connection failures. */ });
     refresh();
     window.addEventListener("focus", refresh);
-    return () => { active = false; window.removeEventListener("focus", refresh); };
+    window.addEventListener("himatu:catalogue-updated", refresh);
+    return () => { active = false; window.removeEventListener("focus", refresh); window.removeEventListener("himatu:catalogue-updated", refresh); };
   }, []);
-  const pricedProducts = useMemo(() => products.map(product => ({ ...product, ...prices[product.id] })), [prices]);
-  const pricedCatalogue = useMemo<Product[]>(() => catalogue.map(product => (product.kind === "concept" || product.kind === "reference") ? product : ({ ...product, ...prices[product.id] })), [prices]);
+  const pricedProducts = useMemo(() => pricedCatalogue.filter((p): p is FigureProduct => p.kind !== "concept" && p.kind !== "reference"), [pricedCatalogue]);
 
   const bagProducts = useMemo(() => pricedCatalogue.filter((product): product is FigureProduct | ReferenceProduct => product.kind !== "concept"), [pricedCatalogue]);
 

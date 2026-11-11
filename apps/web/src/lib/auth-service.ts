@@ -92,6 +92,7 @@ export const authService = {
   updatePassword: (password: string) =>
     request("update-password", { password }),
   signOut: () => request("sign-out", {}),
+  changeAdminEmail: (input: {email:string;currentPassword:string}) => request("admin-email", input),
   updateProfile: (input: { fullName?: string; phone?: string | null }) =>
     request("profile", input),
 };

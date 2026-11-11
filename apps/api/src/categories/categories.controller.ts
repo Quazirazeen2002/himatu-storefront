@@ -35,12 +35,12 @@ export class CategoriesController {
 
   @Get("admin/categories")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async listAdmin() { return this.categoriesService.listAdminCategories(); }
 
   @Post("admin/categories/:id/image")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadImage(@Param("id", new ParseUUIDPipe()) id: string, @UploadedFile() file: Express.Multer.File, @Body("imageIsDemo") demoFlag?: string) {
     if (!file) throw new BadRequestException("Select a JPEG, PNG or WebP image.");
@@ -54,7 +54,7 @@ export class CategoriesController {
 
   @Post("admin/categories")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async createCategory(@Body() body: unknown) {
     const parsed = CreateCategorySchema.parse(body);
     return this.categoriesService.createCategory(parsed);
@@ -62,7 +62,7 @@ export class CategoriesController {
 
   @Patch("admin/categories/:id")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async updateCategory(@Param("id", new ParseUUIDPipe()) id: string, @Body() body: unknown) {
     const parsed = UpdateCategorySchema.parse(body);
     return this.categoriesService.updateCategory(id, parsed);

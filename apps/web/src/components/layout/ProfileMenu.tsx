@@ -185,7 +185,7 @@ export function ProfileMenu() {
                 >
                   <ShieldCheck size={16} />
                   <div className="profile-flyout-link-text">
-                    <strong style={{ color: "var(--accent)" }}>Admin Dashboard</strong>
+                    <strong style={{ color: "var(--accent)" }}>Store Management</strong>
                     <small>Control center, analytics & sales</small>
                   </div>
                   <ArrowUpRight size={14} className="profile-flyout-arrow" />

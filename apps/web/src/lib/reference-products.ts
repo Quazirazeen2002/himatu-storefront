@@ -1,4 +1,4 @@
-import { demoPriceFor } from "./demo-prices";
+import { cataloguePriceFor } from "./catalogue-prices";
 import type { ReferenceProduct } from "./types";
 // Real source photographs; stock and local prices must be approved before sale.
 const sourceProducts: Omit<ReferenceProduct, "price" | "priceIsDemo">[] = [
@@ -526,4 +526,4 @@ const sourceProducts: Omit<ReferenceProduct, "price" | "priceIsDemo">[] = [
   }
 ];
 
-export const referenceProducts: ReferenceProduct[] = sourceProducts.map(product => ({ ...product, price: demoPriceFor(product.id), priceIsDemo: true }));
+export const referenceProducts: ReferenceProduct[] = sourceProducts.map(product => ({ ...product, price: cataloguePriceFor(product.id), priceIsDemo: false }));

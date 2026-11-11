@@ -11,6 +11,7 @@ datasource db {
 enum Role {
   CUSTOMER
   ADMIN
+  MODERATOR
 }
 
 enum OrderStatus {
@@ -48,6 +49,7 @@ model UserProfile {
   addresses        Address[]
   cart             Cart?
   wishlist         Wishlist?
+  socialRequests   SocialOrderRequest[]
   orders           Order[]
   transactions     PaymentTransaction[]
   printingRequests PrintingRequest[]
@@ -201,6 +203,8 @@ model WishlistItem {
 }
 
 model Order {
+  socialRequest SocialOrderRequest?
+  invoice OrderInvoice?
   id                 String               @id @default(uuid()) @db.Uuid
   orderNumber        String               @unique @db.VarChar(50)
   userId             String               @db.Uuid
@@ -454,4 +458,41 @@ model ProductionUpdate {
   createdAt        DateTime           @default(now())
 
   @@index([productionId])
+}
+
+model SocialOrderRequest {
+  ownerNoticeState String @default("NONE") @db.VarChar(20)
+  ownerNoticeAttempts Int @default(0)
+  ownerNoticeClaimedAt DateTime?
+  ownerNoticeSentAt DateTime?
+  id String @id @default(uuid()) @db.Uuid
+  userId String @db.Uuid
+  user UserProfile @relation(fields: [userId], references: [id], onDelete: Restrict)
+  clientReference String @db.Uuid
+  channel String @db.VarChar(20)
+  customer Json
+  items Json
+  status String @default("PENDING") @db.VarChar(20)
+  orderId String? @unique @db.Uuid
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, clientReference])
+  @@index([status, createdAt])
+}
+model OrderInvoice {
+  id String @id @default(uuid()) @db.Uuid
+  orderId String @unique @db.Uuid
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  snapshot Json
+  reviewedBy String @db.Uuid
+  reviewedAt DateTime @default(now())
+  sendingAt DateTime?
+  sentAt DateTime?
+  messageId String?
+}
+model SiteContent {
+  key String @id @db.VarChar(80)
+  value Json
+  updatedAt DateTime @updatedAt
 }

@@ -9,7 +9,7 @@ export function CategoryGallery({ categories, compact = false }: { categories: C
   return <div className={`taxonomy-grid ${compact ? "taxonomy-grid--compact" : ""}`}>
     {categories.map(category => <Link className="taxonomy-card" key={category.slug} href={categoryHref(category)}>
       <div className="taxonomy-image"><AssetImage asset={assets.collection(asCollection(category))} sizes={compact ? "(max-width:767px) 45vw, 20vw" : "(max-width:767px) 45vw, 30vw"} />
-        {category.imageIsDemo && <span className="taxonomy-demo-label">DEMO ARTWORK</span>}
+        {category.imageIsDemo && <span className="taxonomy-demo-label">ILLUSTRATED COVER</span>}
       </div>
       <div className="taxonomy-card-heading"><h3>{category.name}</h3><ArrowUpRight size={18} /></div>
       <p>{category.description}</p>
@@ -24,7 +24,7 @@ export function CollectionFamilyGallery({ categories }: { categories: CategoryDt
     const members=categories.filter(category=>category.kind !== "PRODUCT_TYPE" && category.family === family);
     const cover=members[0]; if(!cover)return null;
     return <Link className="taxonomy-card" href={`/collections?family=${family}`} key={family}>
-      <div className="taxonomy-image"><AssetImage asset={assets.collection(asCollection(cover))} />{cover.imageIsDemo && <span className="taxonomy-demo-label">DEMO ARTWORK</span>}</div>
+      <div className="taxonomy-image"><AssetImage asset={assets.collection(asCollection(cover))} />{cover.imageIsDemo && <span className="taxonomy-demo-label">ILLUSTRATED COVER</span>}</div>
       <div className="taxonomy-card-heading"><h3>{name}</h3><ArrowUpRight size={18} /></div>
       <p>{members.length} {members.length === 1 ? "collection" : "collections"} to explore</p>
     </Link>;

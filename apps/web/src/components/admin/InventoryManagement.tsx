@@ -1,21 +1,10 @@
 "use client";
-
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import {
-  Boxes,
-  Search,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Plus,
-  Minus,
-  Edit2,
-  RefreshCw,
-  X,
-} from "lucide-react";
-import { authService, CustomerSession } from "@/lib/auth-service";
-import { getAdminProducts, adjustAdminInventory } from "@/lib/commerce-api";
+import { useCallback, useEffect, useState } from "react";
+import { Boxes, Edit2, RefreshCw } from "lucide-react";
+import { Modal } from "../ui/Modal";
+import { authService, type CustomerSession } from "@/lib/auth-service";
+import { getAllAdminProducts, adjustAdminInventory } from "@/lib/commerce-api";
+import { availableStock, inventoryGroups, type InventoryGrouping, type StockFilter } from "@/lib/inventory";
 import type { ProductDto } from "@himatu/shared";
 
 export function InventoryManagement() {
@@ -23,318 +12,80 @@ export function InventoryManagement() {
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "low" | "out">("all");
+  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
+  const [grouping, setGrouping] = useState<InventoryGrouping>("product-type");
+  const [category, setCategory] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<ProductDto | null>(null);
-  const [newStock, setNewStock] = useState<number>(0);
+  const [newStock, setNewStock] = useState(0);
   const [adjusting, setAdjusting] = useState(false);
-  const [feedback, setFeedback] = useState<string | null>(null);
-
-  const loadInventory = async (token: string) => {
-    try {
-      const data = await getAdminProducts(token, { limit: 100 });
-      setProducts(data.items);
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-  useEffect(() => {
-    authService.getSession().then((s) => {
-      setSession(s);
-      if (s?.accessToken && s.user.role === "ADMIN") {
-        loadInventory(s.accessToken).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
+  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState("");
+  const load = useCallback(async (token: string) => {
+    setError("");
+    try { setProducts(await getAllAdminProducts(token)); }
+    catch (err) { setError(err instanceof Error ? err.message : "Inventory could not be loaded. Please retry."); }
   }, []);
-
-  const openAdjust = (prod: ProductDto) => {
-    setSelectedProduct(prod);
-    setNewStock(prod.inventory?.quantity ?? 0);
-  };
-
-  const handleAdjustSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedProduct || !session?.accessToken) return;
-    setAdjusting(true);
+  useEffect(() => {
+    let active = true;
+    authService.getSession().then(async current => {
+      if (!active) return;
+      setSession(current);
+      if (current?.accessToken && ["ADMIN", "MODERATOR"].includes(current.user.role)) await load(current.accessToken);
+    }).catch(() => { if (active) setError("Your session could not be loaded. Please sign in again."); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [load]);
+  useEffect(() => {
+    if (!selectedProduct) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape" && !adjusting) setSelectedProduct(null); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [selectedProduct, adjusting]);
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selectedProduct || !session?.accessToken || adjusting) return;
+    if (!Number.isSafeInteger(newStock) || newStock < (selectedProduct.inventory?.reservedQuantity || 0)) {
+      setError("Stock must be a whole number at least as large as the reserved quantity."); return;
+    }
+    setAdjusting(true); setError("");
     try {
       await adjustAdminInventory(session.accessToken, selectedProduct.id, newStock);
-      setFeedback(`Inventory for "${selectedProduct.name}" updated to ${newStock} units.`);
+      setFeedback(`Stock updated for ${selectedProduct.name}: ${newStock} total units.`);
       setSelectedProduct(null);
-      await loadInventory(session.accessToken);
-    } catch (err: any) {
-      alert(err.message || "Failed to update stock");
-    } finally {
-      setAdjusting(false);
-      setTimeout(() => setFeedback(null), 3500);
-    }
-  };
-
-  const filtered = products.filter((p) => {
-    const qty = p.inventory?.quantity ?? 0;
-    if (filter === "low" && (qty > 5 || qty === 0)) return false;
-    if (filter === "out" && qty > 0) return false;
-    if (search.trim()) {
-      const term = search.toLowerCase();
-      return p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term);
-    }
-    return true;
-  });
-
-  if (loading) {
-    return <p style={{ padding: "40px", fontWeight: 700 }}>LOADING INVENTORY WORKSPACE…</p>;
+      window.dispatchEvent(new Event("himatu:catalogue-updated"));
+      await load(session.accessToken);
+    } catch (err) { setError(err instanceof Error ? err.message : "Stock could not be saved. Please retry."); }
+    finally { setAdjusting(false); }
   }
-
-  const lowCount = products.filter((p) => (p.inventory?.quantity ?? 0) <= 5 && (p.inventory?.quantity ?? 0) > 0).length;
-  const outCount = products.filter((p) => (p.inventory?.quantity ?? 0) === 0).length;
-
-  return (
-    <div>
-      <div className="admin-page-header">
-        <div className="admin-page-title-group">
-          <h1>Inventory & Stock Control</h1>
-          <p>Monitor warehouse quantities, set availability thresholds, and adjust inventory levels.</p>
-        </div>
+  const allGroups = inventoryGroups(products, grouping);
+  const groups = inventoryGroups(products, grouping, search, stockFilter).filter(group => category === "all" || group.id === category);
+  const low = products.filter(product => availableStock(product) > 0 && availableStock(product) <= 5).length;
+  const out = products.filter(product => availableStock(product) === 0).length;
+  const count = groups.reduce((sum, group) => sum + group.products.length, 0);
+  if (loading) return <p role="status">Loading inventory…</p>;
+  if (!session || !["ADMIN", "MODERATOR"].includes(session.user.role)) return <p>Administrator access is required.</p>;
+  return <div className="inventory-workspace">
+    <div className="admin-page-header"><div className="admin-page-title-group"><h1>Inventory & Stock Control</h1><p>Your products, organised by category. Track available units and update stock.</p></div><button className="admin-btn admin-btn--secondary" type="button" disabled={!session.accessToken} onClick={() => session.accessToken && load(session.accessToken)}><RefreshCw size={16} /> Refresh inventory</button></div>
+    {feedback && <p className="inventory-feedback" role="status">{feedback}</p>}
+    {error && !selectedProduct && <p className="inventory-error" role="alert">{error}</p>}
+    <div className="admin-card inventory-controls">
+      <div className="inventory-stock-tabs" aria-label="Stock status">{([['all', `All products (${products.length})`],['low', `Low stock (${low})`],['out', `Out of stock (${out})`]] as const).map(([value,label]) => <button key={value} className="admin-btn admin-btn--secondary" type="button" aria-pressed={stockFilter === value} onClick={() => setStockFilter(value)}>{label}</button>)}</div>
+      <div className="inventory-filter-grid">
+        <label className="field"><span>Group products by</span><select aria-label="Group products by" value={grouping} onChange={event => { setGrouping(event.target.value as InventoryGrouping); setCategory("all"); }}><option value="product-type">Product category</option><option value="franchise">Franchise / Universe</option></select></label>
+        <label className="field"><span>{grouping === "product-type" ? "Product category" : "Franchise"}</span><select aria-label={grouping === "product-type" ? "Product category" : "Franchise"} value={category} onChange={event => setCategory(event.target.value)}><option value="all">Show all</option>{allGroups.map(group => <option key={group.id} value={group.id}>{group.name} ({group.products.length})</option>)}</select></label>
+        <label className="field"><span>Search inventory</span><input type="search" placeholder="Name, SKU or franchise" value={search} onChange={event => setSearch(event.target.value)} /></label>
       </div>
-
-      {feedback && (
-        <div style={{ padding: "12px 18px", background: "var(--admin-success-soft)", border: "1px solid var(--admin-success)", color: "var(--admin-success)", borderRadius: "6px", marginBottom: "20px", fontWeight: 700, fontSize: "13px" }}>
-          {feedback}
-        </div>
-      )}
-
-      {/* Filter and Search Bar */}
-      <div className="admin-card" style={{ padding: "16px 20px", marginBottom: "16px" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "16px" }}>
-          <div style={{ display: "flex", gap: "6px" }}>
-            <button
-              type="button"
-              onClick={() => setFilter("all")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "4px",
-                border: 0,
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                background: filter === "all" ? "#111111" : "#f3f4f6",
-                color: filter === "all" ? "#ffffff" : "var(--admin-muted)",
-              }}
-            >
-              All Items ({products.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter("low")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "4px",
-                border: 0,
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                background: filter === "low" ? "#d97706" : "#f3f4f6",
-                color: filter === "low" ? "#ffffff" : "#d97706",
-              }}
-            >
-              Low Stock (≤5) ({lowCount})
-            </button>
-            <button
-              type="button"
-              onClick={() => setFilter("out")}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "4px",
-                border: 0,
-                fontSize: "11px",
-                fontWeight: 800,
-                cursor: "pointer",
-                background: filter === "out" ? "#ef4444" : "#f3f4f6",
-                color: filter === "out" ? "#ffffff" : "#ef4444",
-              }}
-            >
-              Out of Stock ({outCount})
-            </button>
-          </div>
-
-          <div style={{ width: "260px" }}>
-            <input
-              type="search"
-              placeholder="Filter by name or SKU…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                width: "100%",
-                height: "36px",
-                padding: "0 12px",
-                borderRadius: "4px",
-                border: "1px solid var(--admin-border)",
-                fontSize: "12px",
-              }}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Stock Table */}
-      <div className="admin-card">
-        <div className="admin-table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Figure</th>
-                <th>SKU</th>
-                <th>Category</th>
-                <th>Total Stock</th>
-                <th>Reserved</th>
-                <th>Available</th>
-                <th>Status</th>
-                <th style={{ textAlign: "right" }}>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((prod) => {
-                const total = prod.inventory?.quantity ?? 0;
-                const reserved = prod.inventory?.reservedQuantity ?? 0;
-                const available = Math.max(0, total - reserved);
-
-                const statusBadge =
-                  total === 0 ? (
-                    <span className="admin-badge admin-badge--red">Out of Stock</span>
-                  ) : total <= 5 ? (
-                    <span className="admin-badge admin-badge--amber">Low Stock ({total})</span>
-                  ) : (
-                    <span className="admin-badge admin-badge--green">In Stock ({total})</span>
-                  );
-
-                const primaryImage = prod.images?.find((img) => img.isPrimary) || prod.images?.[0];
-
-                return (
-                  <tr key={prod.id}>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                        {primaryImage ? (
-                          <img
-                            src={primaryImage.imageUrl}
-                            alt={prod.name}
-                            style={{ width: "38px", height: "38px", objectFit: "cover", borderRadius: "4px", border: "1px solid var(--admin-border)" }}
-                          />
-                        ) : (
-                          <div style={{ width: "38px", height: "38px", background: "#eee", borderRadius: "4px" }} />
-                        )}
-                        <span style={{ fontWeight: 700 }}>{prod.name}</span>
-                      </div>
-                    </td>
-                    <td style={{ fontFamily: "var(--font-metadata, monospace)", fontSize: "11px", color: "var(--admin-muted)" }}>
-                      {prod.sku}
-                    </td>
-                    <td>
-                      <span className="admin-badge admin-badge--gray">{prod.category?.name || "Anime"}</span>
-                    </td>
-                    <td style={{ fontWeight: 800 }}>{total}</td>
-                    <td style={{ color: "var(--admin-muted)" }}>{reserved}</td>
-                    <td style={{ fontWeight: 800, color: available > 0 ? "var(--admin-text)" : "#ef4444" }}>
-                      {available}
-                    </td>
-                    <td>{statusBadge}</td>
-                    <td style={{ textAlign: "right" }}>
-                      <button
-                        type="button"
-                        className="admin-btn admin-btn--secondary"
-                        style={{ height: "30px", padding: "0 10px", fontSize: "11px" }}
-                        onClick={() => openAdjust(prod)}
-                      >
-                        <Edit2 size={12} />
-                        <span>Update Stock</span>
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Stock Adjustment Modal */}
-      {selectedProduct && (
-        <div className="admin-modal-backdrop" onClick={() => setSelectedProduct(null)}>
-          <div className="admin-modal-card" style={{ maxWidth: "440px" }} onClick={(e) => e.stopPropagation()}>
-            <div className="admin-modal-header">
-              <h3>Update Inventory Stock</h3>
-              <button type="button" onClick={() => setSelectedProduct(null)} style={{ background: "transparent", border: 0, cursor: "pointer" }}>
-                <X size={18} />
-              </button>
-            </div>
-
-            <form onSubmit={handleAdjustSubmit}>
-              <div className="admin-modal-body">
-                <div>
-                  <h4 style={{ margin: "0 0 2px", fontSize: "14px", fontWeight: 800 }}>{selectedProduct.name}</h4>
-                  <span style={{ fontSize: "11px", color: "var(--admin-muted)", fontFamily: "var(--font-metadata, monospace)" }}>
-                    SKU: {selectedProduct.sku}
-                  </span>
-                </div>
-
-                <div style={{ margin: "16px 0" }}>
-                  <label style={{ display: "block", fontSize: "12px", fontWeight: 700, marginBottom: "8px" }}>
-                    Warehouse Quantity (Units)
-                  </label>
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <button
-                      type="button"
-                      className="admin-btn admin-btn--secondary"
-                      style={{ width: "40px", height: "40px", padding: 0 }}
-                      onClick={() => setNewStock((prev) => Math.max(0, prev - 1))}
-                    >
-                      <Minus size={16} />
-                    </button>
-                    <input
-                      type="number"
-                      min="0"
-                      required
-                      value={newStock}
-                      onChange={(e) => setNewStock(Math.max(0, parseInt(e.target.value, 10) || 0))}
-                      style={{
-                        flex: 1,
-                        height: "40px",
-                        textAlign: "center",
-                        fontSize: "16px",
-                        fontWeight: 800,
-                        border: "1px solid var(--admin-border)",
-                        borderRadius: "4px",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="admin-btn admin-btn--secondary"
-                      style={{ width: "40px", height: "40px", padding: 0 }}
-                      onClick={() => setNewStock((prev) => prev + 1)}
-                    >
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: "11px", color: "var(--admin-muted)" }}>
-                  Direct inventory mutations record instantaneous availability changes across all storefront collection views.
-                </div>
-              </div>
-
-              <div className="admin-modal-footer">
-                <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setSelectedProduct(null)}>
-                  Cancel
-                </button>
-                <button type="submit" className="admin-btn admin-btn--primary" disabled={adjusting}>
-                  {adjusting ? "Saving…" : "Confirm Stock Level"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
-  );
+    <p className="inventory-result-count" role="status">{count} products · {groups.length} {grouping === "product-type" ? "categories" : "franchises"}</p>
+    {!groups.length && <div className="admin-card inventory-empty"><Boxes size={28} /><h2>No matching products</h2><p>Try another category, stock status or search.</p><button className="admin-btn admin-btn--secondary" type="button" onClick={() => { setSearch(""); setCategory("all"); setStockFilter("all"); }}>Clear filters</button></div>}
+    {groups.map(group => <section className="admin-card inventory-group" key={group.id} aria-labelledby={`inventory-${group.id}`}>
+      <div className="inventory-group-heading"><div><p>{grouping === "product-type" ? "Product category" : "Franchise"}</p><h2 id={`inventory-${group.id}`}>{group.name}</h2></div><span>{group.products.length} products · {group.products.reduce((sum,p) => sum + availableStock(p), 0)} available units</span></div>
+      <div className="admin-table-wrap"><table className="admin-table inventory-table"><thead><tr><th>Product</th><th>Franchise</th><th>Total</th><th>Reserved</th><th>Available</th><th>Status</th><th>Action</th></tr></thead><tbody>{group.products.map(product => {
+        const available = availableStock(product), primary = product.images.find(image => image.isPrimary) || product.images[0];
+        return <tr key={product.id}><td data-label="Product"><div className="inventory-product">{primary && <img src={primary.imageUrl} alt="" width={44} height={52} loading="lazy" />}<div><strong>{product.name}</strong><small>{product.sku}{!product.isActive ? " · Archived" : ""}</small></div></div></td><td data-label="Franchise">{product.category?.name || "Unassigned"}</td><td data-label="Total">{product.inventory?.quantity || 0}</td><td data-label="Reserved">{product.inventory?.reservedQuantity || 0}</td><td data-label="Available"><strong>{available}</strong></td><td data-label="Status"><span className={`admin-badge admin-badge--${available === 0 ? "red" : available <= 5 ? "amber" : "green"}`}>{available === 0 ? "Out of stock" : available <= 5 ? "Low stock" : "In stock"}</span></td><td data-label="Action"><button className="admin-btn admin-btn--secondary" type="button" aria-label={`Update stock for ${product.name}`} onClick={() => { setError(""); setSelectedProduct(product); setNewStock(product.inventory?.quantity || 0); }}><Edit2 size={14} /> Update stock</button></td></tr>;
+      })}</tbody></table></div>
+    </section>)}
+    <Modal open={Boolean(selectedProduct)} onClose={() => { if (!adjusting) setSelectedProduct(null); }} title="Update inventory stock" className="inventory-stock-modal">
+      {selectedProduct && <form onSubmit={save}><div className="admin-modal-body"><h4>{selectedProduct.name}</h4><label className="field"><span>Warehouse quantity (units)</span><input autoFocus type="number" required min={selectedProduct.inventory?.reservedQuantity || 0} step={1} value={newStock} onChange={event => setNewStock(Number(event.target.value))} /></label><p>{selectedProduct.inventory?.reservedQuantity || 0} units reserved. Available after saving: {Math.max(0, newStock - (selectedProduct.inventory?.reservedQuantity || 0))}.</p>{error && <p className="inventory-error" role="alert">{error}</p>}</div><div className="admin-modal-footer"><button className="admin-btn admin-btn--secondary" disabled={adjusting} type="button" onClick={() => setSelectedProduct(null)}>Cancel</button><button className="admin-btn admin-btn--primary" disabled={adjusting} type="submit">{adjusting ? "Saving…" : "Confirm stock level"}</button></div></form>}
+    </Modal>
+  </div>;
 }
-

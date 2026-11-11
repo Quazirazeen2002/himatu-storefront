@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { VideoSocialLinks } from "./VideoSocialLinks";
 import { BrandLogo } from "./BrandLogo";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight, Facebook, Instagram } from "lucide-react";
 import { Container } from "../ui/Primitives";
 const groups = [
   {
@@ -64,12 +65,13 @@ export function Footer() {
             </div>
           ))}
           <div>
-            <h3>Stay in the loop</h3>
-            <p>
-              Official social channels
-              <br />
-              will be announced at launch.
-            </p>
+            <h3>Your fandom. Connected.</h3>
+            <p>Find your people. Follow HIMATU.</p>
+            <div className="footer-socials">
+              <a className="social-facebook" href="https://www.facebook.com/share/1K5JUqWxwn/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Follow HIMATU on Facebook (opens in new tab)"><Facebook size={22} aria-hidden="true" /><span>Facebook<small>Join our community</small></span><ArrowUpRight size={16} /></a>
+              <a className="social-instagram" href="https://www.instagram.com/himatuofficial?mdxt=MTQ2dXRoNW1nYnllcQ==" target="_blank" rel="noopener noreferrer" aria-label="Follow HIMATU on Instagram (opens in new tab)"><Instagram size={22} aria-hidden="true" /><span>Instagram<small>@himatuofficial</small></span><ArrowUpRight size={16} /></a>
+              <VideoSocialLinks />
+            </div>
           </div>
         </div>
         <div className="footer-bottom">

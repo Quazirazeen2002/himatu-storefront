@@ -1,5 +1,5 @@
-// Owner-requested illustrative BDT amounts. These are demo prices, not verified selling prices.
-export const demoPricesById: Record<string, number> = {
+// Current BDT prices approved by the owner on 10 November 2026.
+export const cataloguePricesById: Record<string, number> = {
   "naruto-uzumaki": 3290,
   "son-goku": 3490,
   "eren-yeager": 3290,
@@ -18,8 +18,8 @@ export const demoPricesById: Record<string, number> = {
   "naruto-sasuke-shirt": 799,
   "konoha-pin": 299,
 };
-export function demoPriceFor(id: string): number {
-  const price = demoPricesById[id];
-  if (!Number.isSafeInteger(price) || price <= 0) throw new Error(`Missing demo price for ${id}`);
+export function cataloguePriceFor(id: string): number {
+  const price = cataloguePricesById[id];
+  if (!Number.isSafeInteger(price) || price <= 0) throw new Error(`Missing catalogue price for ${id}`);
   return price;
 }

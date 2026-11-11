@@ -12,7 +12,6 @@ export function ProductPrice({ product, detail = false }: { product: Product; de
     <span className={`product-pricing ${detail ? "product-pricing--detail" : ""}`}>
       {price.discounted && <del aria-label={`Original price ${formatPrice(price.original)}`}>{formatPrice(price.original)}</del>}
       <strong className="price">{formatPrice(price.current)}</strong>
-      {product.kind === "reference" && <span className="demo-price-label">Demo price</span>}
       {price.discounted && <span className="price-saving">Save {formatPrice(price.saving)}</span>}
     </span>
   );

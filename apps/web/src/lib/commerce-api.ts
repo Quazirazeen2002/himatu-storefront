@@ -48,6 +48,10 @@ function getApiBase(): string {
   return process.env.API_URL || "http://localhost:4000";
 }
 
+export class CommerceApiError extends Error {
+  constructor(message: string, public readonly status: number) { super(message); }
+}
+
 interface FetchOptions extends RequestInit {
   token?: string;
 }
@@ -76,6 +80,7 @@ async function request<T>(endpoint: string, options: FetchOptions = {}): Promise
     ...rest,
     headers: requestHeaders,
     cache: "no-store",
+    signal: rest.signal || AbortSignal.timeout(rest.body instanceof FormData ? 90000 : 10000),
   });
 
   if (!res.ok) {
@@ -84,7 +89,7 @@ async function request<T>(endpoint: string, options: FetchOptions = {}): Promise
       const errorData = await res.json();
       errMessage = errorData.message || errorData.error || errMessage;
     } catch {}
-    throw new Error(errMessage);
+    throw new CommerceApiError(errMessage, res.status);
   }
 
   return res.json();
@@ -132,6 +137,16 @@ export async function getProducts(query: ProductQuery = {}): Promise<PaginatedPr
   return request<PaginatedProducts>(`/products${qs ? `?${qs}` : ""}`);
 }
 
+/** Load every API page so local search, filters and nine-item pagination see new products. */
+export async function getAllProducts(): Promise<ProductDto[]> {
+  const first = await getProducts({ limit: 50 });
+  const items = [...first.items];
+  for (let page = 2; page <= first.totalPages; page++) {
+    items.push(...(await getProducts({ limit: 50, page })).items);
+  }
+  return items;
+}
+
 export async function getProductBySlug(slug: string): Promise<ProductDto> {
   return request<ProductDto>(`/products/${encodeURIComponent(slug)}`);
 }
@@ -147,6 +162,13 @@ export async function getAdminProducts(token: string, query: ProductQuery = {}):
 
   const qs = params.toString();
   return request<PaginatedProducts>(`/admin/products${qs ? `?${qs}` : ""}`, { token });
+}
+
+export async function getAllAdminProducts(token: string): Promise<ProductDto[]> {
+  const first = await getAdminProducts(token, { limit: 100 });
+  const items = [...first.items];
+  for (let page = 2; page <= first.totalPages; page++) items.push(...(await getAdminProducts(token, { limit: 100, page })).items);
+  return items;
 }
 
 export async function createAdminProduct(token: string, data: any): Promise<ProductDto> {
@@ -191,11 +213,25 @@ export async function uploadProductImages(
   productId: string,
   formData: FormData,
 ): Promise<ProductImageDto[]> {
-  return request<ProductImageDto[]>(`/admin/products/${productId}/images`, {
-    method: "POST",
-    body: formData,
-    token,
-  });
+  const files = formData.getAll("files");
+  if (!files.length || files.length > 10) throw new Error("Choose between 1 and 10 photographs.");
+  const uploaded: ProductImageDto[] = [];
+  // One image per request keeps a multi-photo selection below proxy body limits.
+  // Do not retry a completed image when a later image fails.
+  for (const file of files) {
+    const body = new FormData();
+    body.append("files", file);
+    for (const key of ["altText", "isPrimary"]) {
+      const value = formData.get(key);
+      if (value !== null && (key !== "isPrimary" || uploaded.length === 0)) body.append(key, value);
+    }
+    try {
+      uploaded.push(...await request<ProductImageDto[]>(`/admin/products/${productId}/images`, { method: "POST", body, token }));
+    } catch (error) {
+      throw new Error(`${uploaded.length} of ${files.length} photographs uploaded. ${error instanceof Error ? error.message : "Upload failed."} Reloaded photographs remain saved; select only the remaining files to retry.`);
+    }
+  }
+  return uploaded;
 }
 
 export async function updateProductImage(
@@ -813,3 +849,5 @@ export async function uploadCategoryImage(token: string, id: string, file: File,
   const body = new FormData(); body.append("file", file); body.append("imageIsDemo", String(imageIsDemo));
   return request<CategoryDto>(`/admin/categories/${id}/image`, { method: "POST", body, token });
 }
+
+export { request as commerceRequest };

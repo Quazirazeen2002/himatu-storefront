@@ -262,10 +262,13 @@ describe("Phase B: Cart, Wishlist, Addresses, Checkout & Orders", () => {
   });
 
   describe("Order Creation & Concurrency Safety", () => {
+    it.each(["COD", "CARD", "NAGAD"])("rejects new %s orders", async paymentMethod => {
+      await expect(ordersService.createOrder(userId,{addressId:mockAddress.id,paymentMethod})).rejects.toThrow("Only bKash is available");
+    });
     it("should atomically create order, snapshot address, deduct stock, and clear cart", async () => {
       const order = await ordersService.createOrder(userId, {
         addressId: mockAddress.id,
-        paymentMethod: "COD",
+        paymentMethod: "BKASH",
         customerNotes: "Please call before delivery",
       });
 
@@ -274,7 +277,7 @@ describe("Phase B: Cart, Wishlist, Addresses, Checkout & Orders", () => {
       expect(order.subtotal).toBe(11800);
       expect(order.shippingCharge).toBe(80); // Dhaka
       expect(order.totalAmount).toBe(11880);
-      expect(order.paymentMethod).toBe("COD");
+      expect(order.paymentMethod).toBe("BKASH");
       expect(order.paymentStatus).toBe("PENDING");
       expect(order.orderStatus).toBe("PENDING");
       expect(order.addressSnapshot.recipientName).toBe("Razeen Jubair");
@@ -295,7 +298,7 @@ describe("Phase B: Cart, Wishlist, Addresses, Checkout & Orders", () => {
       await expect(
         ordersService.createOrder(otherUserId, {
           addressId: mockAddress.id,
-          paymentMethod: "COD",
+          paymentMethod: "BKASH",
         }),
       ).rejects.toThrow(ForbiddenException);
     });

@@ -11,12 +11,11 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
-import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import { FilesInterceptor } from "@nestjs/platform-express";
 import { ProductsService } from "./products.service";
 import { AuthGuard } from "../auth/auth.guard";
 import { RolesGuard, Roles } from "../auth/roles";
@@ -83,7 +82,7 @@ export class ProductsController {
   // ADMIN ENDPOINTS
   @Get("admin/products")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async listAdmin(
     @Query("page") page?: string,
     @Query("limit") limit?: string,
@@ -102,7 +101,7 @@ export class ProductsController {
 
   @Post("admin/products")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async createProduct(@Body() body: unknown) {
     const parsed = CreateProductSchema.parse(body);
     return this.productsService.createProduct(parsed);
@@ -110,7 +109,7 @@ export class ProductsController {
 
   @Patch("admin/products/:id")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async updateProduct(@Param("id") id: string, @Body() body: unknown) {
     const parsed = UpdateProductSchema.parse(body);
     return this.productsService.updateProduct(id, parsed);
@@ -118,14 +117,14 @@ export class ProductsController {
 
   @Delete("admin/products/:id")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async archiveProduct(@Param("id") id: string) {
     return this.productsService.archiveProduct(id);
   }
 
   @Post("admin/inventory/:productId/adjust")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async adjustInventory(
     @Param("productId") productId: string,
     @Body() body: unknown,
@@ -141,8 +140,8 @@ export class ProductsController {
   // IMAGE ENDPOINTS
   @Post("admin/products/:productId/images")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
-  @UseInterceptors(FilesInterceptor("files", 10))
+  @Roles("ADMIN", "MODERATOR")
+  @UseInterceptors(FilesInterceptor("files", 10, { limits: { fileSize: 10 * 1024 * 1024 } }))
   async uploadImages(
     @Param("productId") productId: string,
     @UploadedFiles() files: Array<Express.Multer.File>,
@@ -160,7 +159,7 @@ export class ProductsController {
         productId,
         file,
         altText,
-        isPrimary === "true" && i === 0,
+        isPrimary === "true" && i === 0 ? true : undefined,
       );
       uploaded.push(result);
     }
@@ -168,20 +167,9 @@ export class ProductsController {
     return uploaded;
   }
 
-  @Patch("admin/products/:productId/images/:imageId")
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
-  async updateImage(
-    @Param("productId") productId: string,
-    @Param("imageId") imageId: string,
-    @Body() body: { altText?: string; isPrimary?: boolean },
-  ) {
-    return this.productsService.updateProductImage(productId, imageId, body);
-  }
-
   @Patch("admin/products/:productId/images/reorder")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async reorderImages(
     @Param("productId") productId: string,
     @Body() body: { items: Array<{ imageId: string; sortOrder: number }> },
@@ -192,9 +180,20 @@ export class ProductsController {
     return this.productsService.reorderProductImages(productId, body.items);
   }
 
+  @Patch("admin/products/:productId/images/:imageId")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("ADMIN", "MODERATOR")
+  async updateImage(
+    @Param("productId") productId: string,
+    @Param("imageId") imageId: string,
+    @Body() body: { altText?: string; isPrimary?: boolean },
+  ) {
+    return this.productsService.updateProductImage(productId, imageId, body);
+  }
+
   @Delete("admin/products/:productId/images/:imageId")
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles("ADMIN")
+  @Roles("ADMIN", "MODERATOR")
   async deleteImage(
     @Param("productId") productId: string,
     @Param("imageId") imageId: string,

@@ -210,7 +210,11 @@ describe("Stage 3 Step 2D: Admin Service & Control Center Analytics", () => {
     expect(initial.currency).toBe("BDT");
 
     const newRate = initial.insideDhakaShipping === 80 ? 95 : 80;
-    const updated = service.updateStoreSettings({ insideDhakaShipping: newRate });
-    expect(updated.insideDhakaShipping).toBe(newRate);
+    try {
+      const updated = service.updateStoreSettings({ insideDhakaShipping: newRate });
+      expect(updated.insideDhakaShipping).toBe(newRate);
+    } finally {
+      service.updateStoreSettings({ insideDhakaShipping: initial.insideDhakaShipping });
+    }
   });
 });

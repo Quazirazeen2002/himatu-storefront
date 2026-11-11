@@ -1,3 +1,4 @@
+import { ZodError } from "zod";
 import {
   ArgumentsHost,
   Catch,
@@ -11,9 +12,11 @@ export class ApiExceptionFilter implements ExceptionFilter {
   catch(error: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse();
     const req = host.switchToHttp().getRequest();
-    const status = error instanceof HttpException ? error.getStatus() : 500;
+    const status = error instanceof ZodError ? 400 : error instanceof HttpException ? error.getStatus() : 500;
     const details =
-      error instanceof HttpException
+      error instanceof ZodError
+        ? { message: error.issues.map(issue => `${issue.path.join(".")}: ${issue.message}`).join(" · ") }
+        : error instanceof HttpException
         ? error.getResponse()
         : { message: "Internal server error" };
     if (status >= 500)

@@ -18,10 +18,10 @@ Use Node 24 LTS and npm. Install from the root:
 ```sh
 npm ci
 npm run db:generate
-npm run dev:api
+npm run dev
 ```
 
-In a second terminal run `npm run dev`. Web: http://localhost:3000. API: http://localhost:4000/api/v1/health. Development Swagger: http://localhost:4000/api/docs.
+`npm run dev` builds the shared package and starts both the frontend and API together. Stop it with Ctrl+C. For separate terminals, use `npm run dev:web` and `npm run dev:api`. Web: http://localhost:3000. API: http://localhost:4000/api/v1/health. Development Swagger: http://localhost:4000/api/docs.
 
 Copy `apps/web/.env.example` to `.env.local` and `apps/api/.env.example` to `.env` when configuring a fresh checkout. Actual local project configuration is ignored and must not be committed. The current workspace is connected to the HIMATU Supabase project; see the Stage 3 report. Database credentials belong only in the API server environment. No Supabase secret key belongs in NEXT_PUBLIC variables.
 

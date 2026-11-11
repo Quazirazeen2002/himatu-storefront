@@ -22,6 +22,7 @@ const visibleCount = () => window.innerWidth < 640 ? 1 : window.innerWidth < 102
 
 export function FigurineSlideshow({ products = defaultProducts }: { products?: Product[] }) {
   const store = useStore();
+  products = store.pricedProducts.filter(p => p.isFeatured || products.some(item => item.id === p.id));
   const reduced = useSyncExternalStore(subscribeMotion, motionSnapshot, () => false);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);

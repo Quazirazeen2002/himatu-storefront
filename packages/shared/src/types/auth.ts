@@ -1,4 +1,4 @@
-export type Role = "CUSTOMER" | "ADMIN";
+export type Role = "CUSTOMER" | "ADMIN" | "MODERATOR";
 export type OtpVerificationType = "signup" | "recovery";
 export interface CustomerProfile {
   id: string;

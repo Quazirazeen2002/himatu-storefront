@@ -55,3 +55,8 @@ export const profileUpdateSchema = z
       .optional(),
   })
   .strict();
+
+export const adminEmailChangeSchema = z.object({
+  email: emailSchema.transform(value => value.toLowerCase()),
+  currentPassword: z.string().min(1, "Enter your current password.").max(128),
+}).strict();

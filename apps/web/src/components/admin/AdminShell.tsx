@@ -1,4 +1,5 @@
 "use client";
+import { inactiveAdminModule } from "@/lib/admin-modules";
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
@@ -36,18 +37,91 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard, group: "OVERVIEW" },
-  { label: "Analytics & Insights", href: "/admin/analytics", icon: TrendingUp, group: "OVERVIEW" },
-  { label: "Products", href: "/admin/products", icon: Package, group: "CATALOGUE" },
-  { label: "Categories", href: "/admin/categories", icon: Layers, group: "CATALOGUE" },
-  { label: "Media Library", href: "/admin/media", icon: ImageIcon, group: "CATALOGUE" },
-  { label: "Inventory", href: "/admin/inventory", icon: Boxes, group: "CATALOGUE" },
+  {
+    label: "Social Order Inbox",
+    href: "/admin/social-orders",
+    icon: ShoppingBag,
+    group: "SALES",
+  },
+  {
+    label: "Homepage Slides",
+    href: "/admin/content",
+    icon: ImageIcon,
+    group: "SETTINGS",
+  },
+  {
+    label: "Staff Roles",
+    href: "/admin/staff",
+    icon: ShieldCheck,
+    group: "SETTINGS",
+  },
+  {
+    label: "Overview",
+    href: "/admin",
+    icon: LayoutDashboard,
+    group: "OVERVIEW",
+  },
+  {
+    label: "Analytics & Insights",
+    href: "/admin/analytics",
+    icon: TrendingUp,
+    group: "OVERVIEW",
+  },
+  {
+    label: "Products",
+    href: "/admin/products",
+    icon: Package,
+    group: "CATALOGUE",
+  },
+  {
+    label: "Categories",
+    href: "/admin/categories",
+    icon: Layers,
+    group: "CATALOGUE",
+  },
+  {
+    label: "Media Library",
+    href: "/admin/media",
+    icon: ImageIcon,
+    group: "CATALOGUE",
+  },
+  {
+    label: "Inventory",
+    href: "/admin/inventory",
+    icon: Boxes,
+    group: "CATALOGUE",
+  },
   { label: "Orders", href: "/admin/orders", icon: ShoppingBag, group: "SALES" },
-  { label: "Payments", href: "/admin/payments", icon: CreditCard, group: "SALES" },
-  { label: "Customers", href: "/admin/customers", icon: Users, group: "CUSTOMERS" },
-  { label: "Custom 3D Printing", href: "/admin/3d-printing", icon: Printer, group: "CUSTOMERS" },
-  { label: "Production Kanban", href: "/admin/3d-printing/production", icon: Layers, group: "CUSTOMERS" },
-  { label: "Store Settings", href: "/admin/settings", icon: Settings, group: "SETTINGS" },
+  {
+    label: "Payments",
+    href: "/admin/payments",
+    icon: CreditCard,
+    group: "SALES",
+  },
+  {
+    label: "Customers",
+    href: "/admin/customers",
+    icon: Users,
+    group: "CUSTOMERS",
+  },
+  {
+    label: "Custom 3D Printing",
+    href: "/admin/3d-printing",
+    icon: Printer,
+    group: "CUSTOMERS",
+  },
+  {
+    label: "Production Kanban",
+    href: "/admin/3d-printing/production",
+    icon: Layers,
+    group: "CUSTOMERS",
+  },
+  {
+    label: "Store Settings",
+    href: "/admin/settings",
+    icon: Settings,
+    group: "SETTINGS",
+  },
 ];
 
 export function AdminShell({ children }: { children: React.ReactNode }) {
@@ -83,7 +157,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
       .then((s) => {
         if (!active) return;
         setSession(s);
-        if (!s || s.user.role !== "ADMIN") {
+        if (!s || !["ADMIN", "MODERATOR"].includes(s.user.role)) {
           router.push("/sign-in?next=/admin");
         }
       })
@@ -117,14 +191,16 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           fontFamily: "var(--font-ui)",
         }}
       >
-        <p style={{ fontWeight: 700, fontSize: "14px", letterSpacing: "0.04em" }}>
+        <p
+          style={{ fontWeight: 700, fontSize: "14px", letterSpacing: "0.04em" }}
+        >
           VERIFYING STORE OWNER PRIVILEGES…
         </p>
       </div>
     );
   }
 
-  if (!session || session.user.role !== "ADMIN") {
+  if (!session || !["ADMIN", "MODERATOR"].includes(session.user.role)) {
     return null;
   }
 
@@ -136,20 +212,57 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     year: "numeric",
   }).format(new Date());
 
-  const currentNav = NAV_ITEMS.find(
-    (item) => item.href === pathname || (item.href !== "/admin" && pathname?.startsWith(item.href)),
-  ) || NAV_ITEMS[0];
+  const permittedPaths = [
+    "/admin/products",
+    "/admin/categories",
+    "/admin/inventory",
+    "/admin/orders",
+    "/admin/social-orders",
+  ];
+  if (
+    session.user.role === "MODERATOR" &&
+    !permittedPaths.some(
+      (path) => pathname === path || pathname.startsWith(`${path}/`),
+    )
+  )
+    return (
+      <div className="admin-card">
+        <h1>Administrator access required</h1>
+        <Link href="/admin/social-orders">Open order inbox</Link>
+      </div>
+    );
+  const inactiveModule = inactiveAdminModule(pathname);
+  const currentNav =
+    NAV_ITEMS.find(
+      (item) =>
+        item.href === pathname ||
+        (item.href !== "/admin" && pathname?.startsWith(item.href)),
+    ) || NAV_ITEMS[0];
 
-  const groups = ["OVERVIEW", "CATALOGUE", "SALES", "CUSTOMERS", "SETTINGS"] as const;
+  const groups = [
+    "OVERVIEW",
+    "CATALOGUE",
+    "SALES",
+    "CUSTOMERS",
+    "SETTINGS",
+  ] as const;
 
   return (
     <div className={`admin-shell ${isCollapsed ? "is-collapsed" : ""}`}>
       {/* 1. Dark Luxury Sidebar */}
-      <aside className={`admin-sidebar ${isCollapsed ? "is-collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}>
+      <aside
+        className={`admin-sidebar ${isCollapsed ? "is-collapsed" : ""} ${mobileOpen ? "mobile-open" : ""}`}
+      >
         <div className="admin-sidebar-header">
-          <Link href="/admin" className="admin-wordmark" title="HIMATU Owner Control Center">
+          <Link
+            href="/admin"
+            className="admin-wordmark"
+            title="HIMATU Owner Control Center"
+          >
             <span className="admin-wordmark-title">HIMATU</span>
-            {!isCollapsed && <span className="admin-owner-tag">OWNER</span>}
+            {!isCollapsed && (
+              <span className="admin-owner-tag">{session.user.role}</span>
+            )}
           </Link>
           <button
             type="button"
@@ -167,25 +280,48 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             return (
               <div key={group} className="admin-nav-group">
                 <span className="admin-nav-group-title">{group}</span>
-                {items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive =
-                    item.href === "/admin"
-                      ? pathname === "/admin"
-                      : pathname?.startsWith(item.href);
+                {items
+                  .filter(
+                    (item) =>
+                      session.user.role === "ADMIN" ||
+                      permittedPaths.includes(item.href),
+                  )
+                  .map((item) => {
+                    const Icon = item.icon;
+                    const isActive =
+                      item.href === "/admin"
+                        ? pathname === "/admin"
+                        : pathname?.startsWith(item.href);
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className={`admin-nav-link ${isActive ? "is-active" : ""}`}
-                      title={isCollapsed ? item.label : undefined}
-                    >
-                      <Icon size={18} />
-                      <span className="admin-nav-label">{item.label}</span>
-                    </Link>
-                  );
-                })}
+                    if (inactiveAdminModule(item.href))
+                      return (
+                        <div
+                          key={item.href}
+                          className="admin-nav-link admin-nav-link--unavailable"
+                          aria-disabled="true"
+                          title={`${item.label}: Out of order`}
+                        >
+                          <Icon size={18} />
+                          <span className="admin-nav-label">
+                            {item.label}
+                            <small className="admin-module-status">
+                              Out of order
+                            </small>
+                          </span>
+                        </div>
+                      );
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        className={`admin-nav-link ${isActive ? "is-active" : ""}`}
+                        title={isCollapsed ? item.label : undefined}
+                      >
+                        <Icon size={18} />
+                        <span className="admin-nav-label">{item.label}</span>
+                      </Link>
+                    );
+                  })}
               </div>
             );
           })}
@@ -198,7 +334,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             onClick={toggleCollapsed}
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+            {isCollapsed ? (
+              <ChevronRight size={16} />
+            ) : (
+              <ChevronLeft size={16} />
+            )}
             <span>{isCollapsed ? "Expand" : "Collapse Navigation"}</span>
           </button>
 
@@ -249,7 +389,9 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
             <div className="admin-header-user">
               <div className="admin-user-avatar" title={session.user.fullName}>
-                {session.user.fullName ? session.user.fullName.slice(0, 2).toUpperCase() : "AD"}
+                {session.user.fullName
+                  ? session.user.fullName.slice(0, 2).toUpperCase()
+                  : "AD"}
               </div>
               <button
                 type="button"
@@ -268,9 +410,27 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Workspace Content */}
-        <main className="admin-content">{children}</main>
+        <main className="admin-content">
+          {inactiveModule ? (
+            <section
+              className="admin-card admin-unavailable-state"
+              role="status"
+            >
+              <h1>{inactiveModule.label}</h1>
+              <p className="admin-unavailable-label">Out of order</p>
+              <p>{inactiveModule.reason}</p>
+              <Link
+                className="admin-btn admin-btn--secondary"
+                href="/admin/orders"
+              >
+                Open Orders
+              </Link>
+            </section>
+          ) : (
+            children
+          )}
+        </main>
       </div>
     </div>
   );
 }
-

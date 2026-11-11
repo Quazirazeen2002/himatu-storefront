@@ -1,3 +1,4 @@
+import { SocialOrdersModule } from "./social-orders/social-orders.module";
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { validateEnvironment } from "./config/environment";
@@ -20,6 +21,7 @@ import { PrintingModule } from "./printing/printing.module";
 
 @Module({
   imports: [
+    SocialOrdersModule,
     ConfigModule.forRoot({ isGlobal: true, validate: validateEnvironment }),
     PrismaModule,
     HealthModule,

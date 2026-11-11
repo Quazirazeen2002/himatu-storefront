@@ -5,7 +5,7 @@ import { Pause, Play, ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { figurePhotos } from "@/lib/assets";
 
-const slides = [
+const defaultSlides = [
   figurePhotos["luffy-gear-five-action"],
   figurePhotos["zoro-asura"],
   figurePhotos["zoro-three-sword-style"],
@@ -13,10 +13,12 @@ const slides = [
 ];
 
 export function HeroSlideshow() {
+  const [slides, setSlides] = useState(defaultSlides);
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [interacting, setInteracting] = useState(false);
+  useEffect(() => {let active=true;fetch("/api/v1/content/hero",{cache:"no-store"}).then(r=>r.ok?r.json():null).then(data=>{if(active&&Array.isArray(data?.slides)&&data.slides.length){setCurrent(0);setSlides(data.slides.map((s:{src:string;alt:string},i:number)=>({...s,id:`hero-${i}`,width:1600,height:1000,placeholder:false})));}}).catch(()=>{});return()=>{active=false;};}, []);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -32,7 +34,7 @@ export function HeroSlideshow() {
       if (!document.hidden) setCurrent((index) => (index + 1) % slides.length);
     }, 6000);
     return () => window.clearInterval(timer);
-  }, [paused, reduced, interacting]);
+  }, [paused, reduced, interacting, slides.length]);
 
   function select(index: number) {
     setCurrent((index + slides.length) % slides.length);
@@ -46,7 +48,7 @@ export function HeroSlideshow() {
       }}>
       {slides.map((asset, index) => (
         <div key={asset.id} className={`hero-photo-slide ${index === current ? "is-active" : ""}`} aria-hidden={index !== current}>
-          <Image src={asset.src!} alt={asset.alt} fill sizes="100vw" preload={index === 0} loading={index === 0 ? undefined : "eager"} />
+          <Image unoptimized={asset.src?.startsWith("https://")} src={asset.src!} alt={asset.alt} fill sizes="100vw" preload={index === 0} loading={index === 0 ? undefined : "eager"} />
         </div>
       ))}
       <div className="hero-photo-shade" />

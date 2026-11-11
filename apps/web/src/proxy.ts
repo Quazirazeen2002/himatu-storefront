@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/api/") ||
     pathname === "/auth/callback" ||
     pathname === "/favicon.ico" ||
-    pathname === "/icon.svg" ||
+    (pathname === "/icon.svg" || pathname === "/icon.png") ||
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml"
   ) {
@@ -144,7 +144,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|images/|art/|fonts/|favicon\\.ico|icon\\.svg|robots\\.txt|sitemap\\.xml).*)",
+    "/((?!api|_next/static|_next/image|images/|art/|fonts/|favicon\\.ico|icon\\.svg|icon\\.png|robots\\.txt|sitemap\\.xml).*)",
   ],
 };
 

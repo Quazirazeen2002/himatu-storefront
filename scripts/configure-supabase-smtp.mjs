@@ -54,7 +54,7 @@ const payload = {
   smtp_host: env.SMTP_HOST || "smtp.gmail.com",
   smtp_port: String(env.SMTP_PORT || "587"),
   smtp_user: env.SMTP_USER || "razeenjubair10@gmail.com",
-  smtp_pass: env.SMTP_PASSWORD || "hcungrjrxoiejtgq",
+  smtp_pass: env.SMTP_PASSWORD,
   smtp_sender_name: env.SMTP_SENDER_NAME || "HIMATU",
   mailer_autoconfirm: false,
   mailer_otp_exp: 900,

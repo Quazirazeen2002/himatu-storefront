@@ -1,0 +1,14 @@
+import { NextRequest } from "next/server";
+import { POST } from "../src/app/api/auth/[action]/route";
+import { resetAuthRateLimits } from "../src/lib/auth-rate-limit";
+import { serverAuth, currentProfile } from "../src/lib/server-auth";
+jest.mock("next/headers",()=>({cookies:jest.fn(async()=>({get:()=>undefined,set:jest.fn(),delete:jest.fn()}))}));
+jest.mock("../src/lib/server-auth",()=>({authConfigured:()=>true,csrfAllowed:()=>true,serverAuth:jest.fn(),currentProfile:jest.fn(),synchronizeCustomerProfile:jest.fn(),appOrigin:()=>"http://localhost:3000",unavailable:jest.fn()}));
+const identity={id:"admin-id",email:"admin@example.com",email_confirmed_at:"2026-01-01"};
+const auth={getUser:jest.fn(),signInWithPassword:jest.fn(),updateUser:jest.fn()};
+const submit=(body:unknown)=>POST(new NextRequest("http://localhost:3000/api/auth/admin-email",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)}),{params:Promise.resolve({action:"admin-email"})});
+beforeEach(()=>{jest.clearAllMocks();resetAuthRateLimits();jest.mocked(serverAuth).mockResolvedValue({auth} as never);jest.mocked(currentProfile).mockResolvedValue({status:200,body:{ok:true,user:{role:"ADMIN"}}} as never);auth.getUser.mockResolvedValue({data:{user:identity},error:null});auth.signInWithPassword.mockResolvedValue({data:{user:identity},error:null});auth.updateUser.mockResolvedValue({data:{user:identity},error:null});});
+it("requires administrator privileges before requesting email changes",async()=>{jest.mocked(currentProfile).mockResolvedValue({status:200,body:{ok:true,user:{role:"MODERATOR"}}} as never);expect((await submit({email:"new@example.com",currentPassword:"password"})).status).toBe(403);expect(auth.updateUser).not.toHaveBeenCalled();});
+it("requires verified current identity and the current password",async()=>{auth.signInWithPassword.mockResolvedValue({data:{user:null},error:{message:"Wrong password"}});expect((await submit({email:"new@example.com",currentPassword:"wrong"})).status).toBe(401);expect(auth.updateUser).not.toHaveBeenCalled();});
+it("requests provider verification without altering staff roles or directly replacing profile email",async()=>{const res=await submit({email:"new@example.com",currentPassword:"password"});expect(res.status).toBe(200);expect(auth.updateUser).toHaveBeenCalledWith({email:"new@example.com"},{emailRedirectTo:expect.stringContaining("/auth/callback?next=%2Fadmin%2Fsettings")});expect((await res.json()).message).toContain("verification");});
+it("rejects invalid input and unchanged email",async()=>{expect((await submit({email:"not-an-email",currentPassword:"x"})).status).toBe(400);expect((await submit({email:identity.email,currentPassword:"x"})).status).toBe(400);expect(auth.updateUser).not.toHaveBeenCalled();});

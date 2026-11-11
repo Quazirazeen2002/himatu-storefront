@@ -6,7 +6,9 @@ export const metadata = {
   description: "Manage your HIMATU collector profile, shipping addresses, orders, and security.",
 };
 
-export default function Account() {
+export default async function Account({ searchParams }: { searchParams: Promise<{ tab?: string; add?: string; returnTo?: string }> }) {
+  const query = await searchParams;
+  const initialTab = query.tab === "addresses" ? "addresses" : "profile";
   return (
     <Container className="page-content">
       <div className="page-intro">
@@ -18,7 +20,7 @@ export default function Account() {
         </h1>
         <p>Manage your collector profile, verified shipping addresses, orders, and authentication.</p>
       </div>
-      <CustomerAccount />
+      <CustomerAccount key={`${initialTab}-${query.add || ""}`} initialTab={initialTab} addAddress={initialTab === "addresses" && query.add === "1"} returnToCheckout={query.returnTo === "checkout"} />
     </Container>
   );
 }

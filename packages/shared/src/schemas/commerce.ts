@@ -65,7 +65,7 @@ export const UpdateAddressSchema = CreateAddressSchema.partial();
 
 export const CreateOrderSchema = z.object({
   addressId: z.string().uuid("Invalid address ID"),
-  paymentMethod: z.enum(["COD", "BKASH", "NAGAD", "CARD"]).default("COD"),
+  paymentMethod: z.literal("BKASH").default("BKASH"),
   customerNotes: z.string().max(1000).optional().nullable(),
 });
 

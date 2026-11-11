@@ -1,22 +1,28 @@
 "use client";
+import {
+  registerSocialOrder,
+  channelLink,
+  socialOrderChannels,
+  type SocialOrderChannel,
+} from "@/lib/social-orders";
+import { VideoSocialLinks } from "../layout/VideoSocialLinks";
 import { pricing } from "@/lib/pricing";
-import { formatWhatsAppOrder, whatsappLink } from "@/lib/whatsapp";
+import { formatWhatsAppOrder } from "@/lib/whatsapp";
 
-import { useState, useEffect, useRef } from "react";
-import Link from "next/link";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   ShieldCheck,
   Truck,
-  CreditCard,
-  Wallet,
   Lock,
   CheckCircle2,
   Package,
   LoaderCircle,
-  Clock,
   Sparkles,
   MessageCircle,
+  Instagram,
+  ArrowUpRight,
   Copy,
   AlertCircle,
 } from "lucide-react";
@@ -27,47 +33,8 @@ import { assets } from "@/lib/assets";
 import { Button, ButtonLink, Input } from "../ui/Primitives";
 import { authService, type CustomerSession } from "@/lib/auth-service";
 import { validate, focusError, type FormErrors } from "@/lib/validation";
-import {
-  getAddresses,
-  createAddress,
-  getProducts,
-  addCartItem,
-  createOrder,
-  initiatePayment,
-} from "@/lib/commerce-api";
+import { getAddresses } from "@/lib/commerce-api";
 import type { AddressDto } from "@himatu/shared";
-
-interface ShippingMethod {
-  id: "dhaka-express" | "nationwide-standard" | "vault-pickup";
-  title: string;
-  price: number;
-  time: string;
-  description: string;
-}
-
-const SHIPPING_METHODS: ShippingMethod[] = [
-  {
-    id: "dhaka-express",
-    title: "Inside Dhaka Express Courier",
-    price: 80,
-    time: "1–2 Business Days",
-    description: "Estimated local delivery. Confirm the final charge and service with HIMATU.",
-  },
-  {
-    id: "nationwide-standard",
-    title: "Outside Dhaka Standard Courier",
-    price: 130,
-    time: "2–4 Business Days",
-    description: "Estimated delivery outside Dhaka. Confirm service coverage with HIMATU.",
-  },
-  {
-    id: "vault-pickup",
-    title: "Pickup enquiry",
-    price: 0,
-    time: "Arrange with HIMATU",
-    description: "Ask our team whether pickup is available and confirm the location.",
-  },
-];
 
 const BANGLADESH_DISTRICTS = [
   "Dhaka",
@@ -106,8 +73,6 @@ export function CheckoutForm() {
     area: "",
     address: "",
     postalCode: "",
-    shippingMethod: "dhaka-express" as ShippingMethod["id"],
-    paymentMethod: "BKASH" as "COD" | "BKASH" | "SSLCOMMERZ",
     orderNotes: "",
     saveAddress: true,
   });
@@ -115,12 +80,15 @@ export function CheckoutForm() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
-  const [freeShippingPromo, setFreeShippingPromo] = useState(false);
+  const [, setFreeShippingPromo] = useState(false);
   const [promoMessage, setPromoMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [orderChannel, setOrderChannel] = useState<"whatsapp" | "website">("whatsapp");
-  const [whatsappDraft, setWhatsappDraft] = useState("");
-  const lastWhatsAppOpen = useRef(0);
+  const [orderChannel, setOrderChannel] =
+    useState<SocialOrderChannel>("whatsapp");
+  const [socialDraft, setSocialDraft] = useState<{
+    channel: SocialOrderChannel;
+    message: string;
+  } | null>(null);
   const [copied, setCopied] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -153,10 +121,6 @@ export function CheckoutForm() {
                   area: def.area,
                   address: def.fullAddress,
                   postalCode: def.postalCode || "",
-                  shippingMethod:
-                    def.district.toLowerCase() === "dhaka"
-                      ? "dhaka-express"
-                      : "nationwide-standard",
                 }));
               }
             } catch (err) {
@@ -170,7 +134,8 @@ export function CheckoutForm() {
 
   // Items in bag
   const bagEntries = Object.entries(store.bag).filter(
-    ([id, quantity]) => quantity > 0 && store.bagProducts.some((p) => p.id === id),
+    ([id, quantity]) =>
+      quantity > 0 && store.bagProducts.some((p) => p.id === id),
   );
 
   const cartItems = bagEntries.map(([id, quantity]) => {
@@ -183,29 +148,19 @@ export function CheckoutForm() {
   });
 
   const itemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotal = cartItems.reduce((acc, item) => acc + (item.lineTotal ?? 0), 0);
+  const subtotal = cartItems.reduce(
+    (acc, item) => acc + (item.lineTotal ?? 0),
+    0,
+  );
 
-  const hasDemoPrices = cartItems.some(item => item.product.kind === "reference");
-  const isFreeShipping = subtotal >= 15000 || freeShippingPromo;
-  const selectedShipping =
-    SHIPPING_METHODS.find((m) => m.id === values.shippingMethod) ||
-    SHIPPING_METHODS[0];
-
-  const shippingPrice = isFreeShipping ? 0 : selectedShipping.price;
+  const shippingPrice = 0;
   const discountAmount = Math.round((subtotal * discountPercent) / 100);
   const grandTotal = Math.max(0, subtotal - discountAmount + shippingPrice);
 
   const handleChange = (key: keyof typeof values, val: string | boolean) => {
-    setWhatsappDraft("");
+    setSocialDraft(null);
     setValues((prev) => {
       const next = { ...prev, [key]: val };
-      // Auto-adjust shipping method when district changes
-      if (key === "district") {
-        const isDhaka = String(val).toLowerCase() === "dhaka";
-        if (prev.shippingMethod !== "vault-pickup") {
-          next.shippingMethod = isDhaka ? "dhaka-express" : "nationwide-standard";
-        }
-      }
       return next;
     });
     if (errors[key]) {
@@ -214,7 +169,7 @@ export function CheckoutForm() {
   };
 
   const handleSelectSavedAddress = (addr: AddressDto) => {
-    setWhatsappDraft("");
+    setSocialDraft(null);
     setSelectedAddressId(addr.id);
     setValues((prev) => ({
       ...prev,
@@ -224,16 +179,12 @@ export function CheckoutForm() {
       area: addr.area,
       address: addr.fullAddress,
       postalCode: addr.postalCode || "",
-      shippingMethod:
-        addr.district.toLowerCase() === "dhaka"
-          ? "dhaka-express"
-          : "nationwide-standard",
     }));
   };
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
-    setWhatsappDraft("");
+    setSocialDraft(null);
     const clean = promoCode.trim().toUpperCase();
     setFreeShippingPromo(clean === "FREESHIP");
     if (clean === "HIMATU10" || clean === "BANKAI" || clean === "ANIME") {
@@ -267,7 +218,12 @@ export function CheckoutForm() {
       },
       {
         fullName: { label: "Full name", required: true, max: 120 },
-        email: { label: "Email address", required: true, kind: "email", max: 254 },
+        email: {
+          label: "Email address",
+          required: true,
+          kind: "email",
+          max: 254,
+        },
         phone: { label: "Phone number", required: true, kind: "phone" },
         district: { label: "District", required: true, max: 100 },
         area: { label: "Area / Thana", required: true, max: 150 },
@@ -281,101 +237,71 @@ export function CheckoutForm() {
       return;
     }
 
-    if (orderChannel === "whatsapp") {
-      const now = Date.now();
-      if (now - lastWhatsAppOpen.current < 1500) return;
-      lastWhatsAppOpen.current = now;
-      const message = formatWhatsAppOrder({
-        customer: values,
-        items: cartItems.map(({ product, quantity }) => ({ name: product.name, character: product.character, quantity, unitPrice: pricing(product).current, demoPrice: product.kind === "reference", slug: product.id })),
-        subtotal, discount: discountAmount, shipping: shippingPrice, total: grandTotal,
-        shippingMethod: selectedShipping.title,
-        paymentMethod: values.paymentMethod === "COD" ? "Cash on delivery (subject to confirmation)" : values.paymentMethod === "BKASH" ? "bKash (arrange with HIMATU)" : "Card / bank (arrange with HIMATU)",
-        origin: window.location.origin,
-      });
-      setWhatsappDraft(message);
-      setCopied(false);
-      window.open(whatsappLink(message), "_blank", "noopener,noreferrer");
+    if (!session?.accessToken) {
+      router.push("/sign-in?next=%2Fcheckout");
       return;
     }
-    if (hasDemoPrices) {
-      setServerError("This cart includes demo prices. Use WhatsApp checkout to confirm the final selling prices before payment.");
-      return;
-    }
+
+    if (submitting) return;
     setSubmitting(true);
-
+    const chat = window.open("about:blank", "_blank");
+    if (chat) chat.opener = null;
     try {
-      const activeSession = session || (await authService.getSession());
-      if (!activeSession?.accessToken) {
-        router.push("/sign-in?next=/checkout");
-        return;
-      }
-
-      const token = activeSession.accessToken;
-
-      // 1. Resolve or Create Address
-      let finalAddressId = selectedAddressId;
-      if (selectedAddressId === "new" || !savedAddresses.some((a) => a.id === selectedAddressId)) {
-        const newAddress = await createAddress(token, {
-          recipientName: values.fullName,
+      const request = await registerSocialOrder(session.accessToken, {
+        channel: orderChannel,
+        customer: {
+          fullName: values.fullName,
+          email: values.email,
           phone: values.phone,
-          district: values.district,
+          address: values.address,
           area: values.area,
-          fullAddress: values.address,
-          postalCode: values.postalCode || null,
-          isDefault: true,
-        });
-        finalAddressId = newAddress.id;
-      }
-
-      // 2. Synchronize Items into PostgreSQL Cart
-      const dbProducts = await getProducts({ limit: 50 });
-      for (const item of cartItems) {
-        const matchingDbProduct = dbProducts.items.find(
-          (p) => p.slug === item.product.id || p.name === item.product.name,
-        );
-        if (matchingDbProduct) {
-          await addCartItem(token, matchingDbProduct.id, item.quantity);
-        }
-      }
-
-      // 3. Atomically Create Order
-      const mappedMethod = values.paymentMethod === "SSLCOMMERZ" ? "CARD" : values.paymentMethod;
-      const order = await createOrder(token, {
-        addressId: finalAddressId,
-        paymentMethod: mappedMethod,
-        customerNotes: values.orderNotes || undefined,
-      });
-
-      // 4. Initiate Payment
-      const payResult = await initiatePayment(
-        {
-          orderId: order.id,
-          provider: values.paymentMethod,
+          district: values.district,
+          postalCode: values.postalCode,
+          orderNotes: values.orderNotes,
         },
-        token,
-      );
-
-      // 5. Clear client cart state
-      bagEntries.forEach(([id]) => {
-        store.setQuantity(id, 0);
+        items: cartItems.map(({ product, quantity }) => ({
+          productId: product.databaseId || null,
+          slug: product.id,
+          name: product.name,
+          quantity,
+          unitPrice: pricing(product).current,
+        })),
       });
-
-      // 6. Navigate to payment or confirmation
-      if (values.paymentMethod === "COD") {
-        router.push(`/order-confirmation?orderNumber=${encodeURIComponent(order.orderNumber)}`);
-      } else if (payResult.paymentUrl) {
-        window.location.href = payResult.paymentUrl;
-      } else {
-        router.push(
-          `/checkout/payment-result?provider=${values.paymentMethod}&trxRef=${encodeURIComponent(
-            payResult.transactionRef,
-          )}&orderNumber=${encodeURIComponent(order.orderNumber)}&status=PENDING`,
-        );
+      const message =
+        `Request reference: ${request.id}\n` +
+        formatWhatsAppOrder({
+          customer: values,
+          items: cartItems.map(({ product, quantity }) => ({
+            name: product.name,
+            character: product.character,
+            quantity,
+            unitPrice: pricing(product).current,
+            slug: product.id,
+          })),
+          subtotal,
+          discount: discountAmount,
+          shipping: 0,
+          shippingPending: true,
+          total: Math.max(0, subtotal - discountAmount),
+          origin: window.location.origin,
+        });
+      setSocialDraft({ channel: orderChannel, message });
+      setCopied(false);
+      if (orderChannel !== "whatsapp") {
+        try {
+          await navigator.clipboard.writeText(message);
+          setCopied(true);
+        } catch {}
       }
-    } catch (err: unknown) {
-      console.error("Checkout submission failed:", err);
-      setServerError(err instanceof Error ? err.message : "Order placement failed. Please verify your details and try again.");
+      if (chat) chat.location.href = channelLink(orderChannel, message);
+    } catch (error) {
+      chat?.close();
+      setServerError(
+        error instanceof Error
+          ? error.message
+          : "Your order could not be registered. Please try again. Chat has not been opened.",
+      );
+    } finally {
       setSubmitting(false);
     }
   };
@@ -404,7 +330,11 @@ export function CheckoutForm() {
       )}
 
       {/* LEFT COLUMN: All Checkout Steps on One Cohesive Page */}
-      <form noValidate className="onepage-checkout-main" onSubmit={handleSubmit}>
+      <form
+        noValidate
+        className="onepage-checkout-main"
+        onSubmit={handleSubmit}
+      >
         {/* Security & Reassurance Header Banner */}
         <div className="checkout-reassurance-strip">
           <div className="reassurance-item">
@@ -437,8 +367,8 @@ export function CheckoutForm() {
             <div className="checkout-member-pill">
               <CheckCircle2 size={16} className="text-accent" />
               <span>
-                Ordering as <strong>{session.user.fullName || "Member"}</strong> (
-                {session.user.email})
+                Ordering as <strong>{session.user.fullName || "Member"}</strong>{" "}
+                ({session.user.email})
               </span>
             </div>
           )}
@@ -490,7 +420,10 @@ export function CheckoutForm() {
         </section>
 
         {/* SECTION 2: Shipping Destination */}
-        <section className="checkout-card" aria-labelledby="shipping-address-heading">
+        <section
+          className="checkout-card"
+          aria-labelledby="shipping-address-heading"
+        >
           <div className="checkout-card-header">
             <div className="step-number">2</div>
             <div>
@@ -514,7 +447,9 @@ export function CheckoutForm() {
                   >
                     <div className="saved-addr-top">
                       <strong>{addr.label || "Address"}</strong>
-                      {addr.isDefault && <span className="default-tag">DEFAULT</span>}
+                      {addr.isDefault && (
+                        <span className="default-tag">DEFAULT</span>
+                      )}
                     </div>
                     <p className="saved-addr-text">
                       {addr.recipientName} · {addr.phone}
@@ -523,20 +458,29 @@ export function CheckoutForm() {
                     </p>
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setSelectedAddressId("new")}
-                  className={`saved-addr-card ${selectedAddressId === "new" ? "selected" : ""}`}
+                <Link
+                  href="/account?tab=addresses&add=1&returnTo=checkout"
+                  className="saved-addr-card"
                 >
                   <div className="saved-addr-top">
                     <strong>+ New Address</strong>
                   </div>
-                  <p className="saved-addr-text">Enter another delivery destination</p>
-                </button>
+                  <p className="saved-addr-text">
+                    Manage your delivery address in your profile
+                  </p>
+                </Link>
               </div>
             </div>
           )}
 
+          {!savedAddresses.length && (
+            <Link
+              className="checkout-address-link"
+              href="/account?tab=addresses&add=1&returnTo=checkout"
+            >
+              + New address in your profile <ArrowUpRight size={16} />
+            </Link>
+          )}
           <div className="checkout-fields-grid">
             <div className="field">
               <label htmlFor="district">District *</label>
@@ -593,7 +537,9 @@ export function CheckoutForm() {
 
             <div className="checkout-full-width">
               <div className="field">
-                <label htmlFor="orderNotes">Delivery Instructions (Optional)</label>
+                <label htmlFor="orderNotes">
+                  Delivery Instructions (Optional)
+                </label>
                 <textarea
                   id="orderNotes"
                   rows={2}
@@ -609,160 +555,108 @@ export function CheckoutForm() {
           </div>
         </section>
 
-        {/* SECTION 3: Shipping Method Selection */}
-        <section className="checkout-card" aria-labelledby="shipping-method-heading">
-          <div className="checkout-card-header">
-            <div className="step-number">3</div>
-            <div>
-              <h2 id="shipping-method-heading">SHIPPING METHOD</h2>
-              <p className="card-subtext">
-                Choose a delivery preference. Charges and timing will be confirmed by HIMATU.
-              </p>
-            </div>
-          </div>
-
-          <div className="shipping-methods-list" role="radiogroup">
-            {SHIPPING_METHODS.map((method) => {
-              const isSelected = values.shippingMethod === method.id;
-              const displayPrice =
-                isFreeShipping && method.price > 0 ? (
-                  <span className="free-shipping-tag">FREE (applied)</span>
-                ) : method.price === 0 ? (
-                  "FREE"
-                ) : (
-                  `৳${method.price}`
-                );
-
-              return (
-                <label
-                  key={method.id}
-                  className={`option-card ${isSelected ? "selected" : ""}`}
-                >
-                  <input
-                    type="radio"
-                    name="shippingMethod"
-                    value={method.id}
-                    checked={isSelected}
-                    onChange={() => handleChange("shippingMethod", method.id)}
-                    className="option-radio"
-                    disabled={submitting}
-                  />
-                  <div className="option-body">
-                    <div className="option-title-row">
-                      <span className="option-title">{method.title}</span>
-                      <span className="option-price">{displayPrice}</span>
-                    </div>
-                    <span className="option-time">
-                      <Clock size={12} /> {method.time}
-                    </span>
-                    <p className="option-description">{method.description}</p>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* SECTION 4: Payment Method (Cash on Delivery) */}
-        <section className="checkout-card" aria-labelledby="payment-heading">
-          <div className="checkout-card-header">
-            <div className="step-number">4</div>
-            <div>
-              <h2 id="payment-heading">PAYMENT METHOD</h2>
-              <p className="card-subtext">
-                Choose your preferred payment method. WhatsApp orders are arranged directly with our team.
-              </p>
-            </div>
-          </div>
-
-          <div className="payment-methods-list">
-            {/* bKash DIRECT */}
-            <label className={`option-card ${values.paymentMethod === "BKASH" ? "selected" : ""}`}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="BKASH"
-                checked={values.paymentMethod === "BKASH"}
-                onChange={() => handleChange("paymentMethod", "BKASH")}
-                className="option-radio"
-                disabled={submitting}
-              />
-              <div className="option-body">
-                <div className="option-title-row">
-                  <div className="option-flex-title">
-                    <Wallet size={17} />
-                    <span className="option-title">bKash Direct Checkout</span>
-                  </div>
-                  <span className="payment-tag active-tag">PAYMENT PREFERENCE</span>
-                </div>
-                <p className="option-description">
-                  {orderChannel === "whatsapp" ? "Request bKash payment details from HIMATU after availability and the final total are confirmed." : "Continue through the configured bKash checkout flow."}
-                </p>
-              </div>
-            </label>
-
-            {/* SSLCOMMERZ HOSTED GATEWAY */}
-            <label className={`option-card ${values.paymentMethod === "SSLCOMMERZ" ? "selected" : ""}`}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="SSLCOMMERZ"
-                checked={values.paymentMethod === "SSLCOMMERZ"}
-                onChange={() => handleChange("paymentMethod", "SSLCOMMERZ")}
-                className="option-radio"
-                disabled={submitting}
-              />
-              <div className="option-body">
-                <div className="option-title-row">
-                  <div className="option-flex-title">
-                    <CreditCard size={17} />
-                    <span className="option-title">Credit / Debit Card & NetBanking</span>
-                  </div>
-                  <span className="payment-tag active-tag">VISA · MC · AMEX · BANKS</span>
-                </div>
-                <p className="option-description">
-                  {orderChannel === "whatsapp" ? "Ask HIMATU which card or bank options are available for your order." : "Continue through the configured hosted payment flow."}
-                </p>
-              </div>
-            </label>
-
-            {/* CASH ON DELIVERY */}
-            <label className={`option-card ${values.paymentMethod === "COD" ? "selected" : ""}`}>
-              <input
-                type="radio"
-                name="paymentMethod"
-                value="COD"
-                checked={values.paymentMethod === "COD"}
-                onChange={() => handleChange("paymentMethod", "COD")}
-                className="option-radio"
-                disabled={submitting}
-              />
-              <div className="option-body">
-                <div className="option-title-row">
-                  <div className="option-flex-title">
-                    <Truck size={17} />
-                    <span className="option-title">Cash on Delivery (COD)</span>
-                  </div>
-                  <span className="payment-tag active-tag">PAY AT DOORSTEP</span>
-                </div>
-                <p className="option-description">
-                  Request cash on delivery. Our team will confirm eligibility and delivery arrangements.
-                </p>
-              </div>
-            </label>
-          </div>
-        </section>
-
-        <section className="checkout-card checkout-channel" aria-labelledby="order-channel-heading">
+        <section
+          className="checkout-card checkout-channel"
+          aria-labelledby="order-channel-heading"
+        >
           <h2 id="order-channel-heading">HOW WOULD YOU LIKE TO ORDER?</h2>
-          <label className="option-card"><input type="radio" name="orderChannel" checked={orderChannel === "whatsapp"} onChange={() => setOrderChannel("whatsapp")} /><span><strong>WhatsApp order</strong><small>One message with your bag and delivery details. Review and tap Send in WhatsApp.</small></span></label>
-          <label className="option-card"><input type="radio" name="orderChannel" disabled={hasDemoPrices} checked={orderChannel === "website"} onChange={() => setOrderChannel("website")} /><span><strong>Website checkout</strong><small>{hasDemoPrices ? "Demo-priced items use WhatsApp checkout to confirm final selling prices." : "Continue with the existing account and payment flow."}</small></span></label>
+          {socialOrderChannels.map((channel) => (
+            <label
+              key={channel.id}
+              className={`option-card ${orderChannel === channel.id ? "selected" : ""}`}
+            >
+              <input
+                type="radio"
+                name="orderChannel"
+                disabled={submitting}
+                checked={orderChannel === channel.id}
+                onChange={() => {
+                  setOrderChannel(channel.id);
+                  setSocialDraft(null);
+                }}
+              />
+              <MessageCircle size={20} />
+              <span>
+                <strong>{channel.name} order</strong>
+                <small>
+                  {channel.id === "whatsapp"
+                    ? "Open WhatsApp with your order message ready to send."
+                    : `Open ${channel.name} automatically. Your order details are copied for you to paste and send.`}
+                </small>
+              </span>
+            </label>
+          ))}
         </section>
-        {whatsappDraft && <section className="checkout-card whatsapp-draft" aria-label="WhatsApp order message" role="status">
-          <h2>YOUR MESSAGE IS READY.</h2><p>WhatsApp opens with your order details. Press Send there to contact HIMATU. Your bag stays saved until the order is confirmed.</p>
-          <pre>{whatsappDraft}</pre><a className="button button--primary" href={whatsappLink(whatsappDraft)} target="_blank" rel="noopener noreferrer">OPEN WHATSAPP <MessageCircle size={16} /></a>
-          <button type="button" className="text-link" onClick={async () => { try { await navigator.clipboard.writeText(whatsappDraft); setCopied(true); } catch { setServerError("Copy is unavailable. Select the message above or use Open WhatsApp."); } }}><Copy size={15} />{copied ? "COPIED" : "COPY MESSAGE"}</button>
-        </section>}
+        <section
+          className="checkout-card"
+          aria-labelledby="checkout-social-heading"
+        >
+          <h2 id="checkout-social-heading">FOLLOW THE COLLECTION.</h2>
+          <div className="footer-socials checkout-video-socials">
+            <VideoSocialLinks />
+          </div>
+        </section>
+        {socialDraft && (
+          <section
+            className="checkout-card whatsapp-draft"
+            aria-label={`${socialDraft.channel} order message`}
+            role="status"
+          >
+            <h2>ORDER REQUEST RECEIVED.</h2>
+            <p>
+              Your order request has been received.{" "}
+              {socialDraft.channel === "whatsapp"
+                ? "Your message is ready in WhatsApp. Tap Send to continue with HIMATU."
+                : copied
+                  ? `Your details have been copied. Paste them into your ${socialDraft.channel} conversation and tap Send.`
+                  : `Open ${socialDraft.channel}, then copy and paste the order details below to continue with HIMATU.`}
+            </p>
+            <details>
+              <summary>Order message and contact link</summary>
+              <textarea
+                className="social-order-message"
+                aria-label="Complete order message"
+                readOnly
+                value={socialDraft.message}
+                rows={12}
+                onFocus={(event) => event.currentTarget.select()}
+              />
+              <div className="social-draft-actions">
+                <button
+                  type="button"
+                  className="button button--primary"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(socialDraft.message);
+                      setCopied(true);
+                    } catch {
+                      setCopied(false);
+                      setServerError(
+                        "Select and copy the order message above, then paste it into the chat.",
+                      );
+                    }
+                  }}
+                >
+                  <Copy size={15} />
+                  {copied ? "DETAILS COPIED" : "COPY DETAILS"}
+                </button>
+                <a
+                  className="button button--outline"
+                  href={channelLink(socialDraft.channel, socialDraft.message)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {socialDraft.channel === "instagram" ? (
+                    <Instagram size={16} />
+                  ) : (
+                    <MessageCircle size={16} />
+                  )}{" "}
+                  OPEN {socialDraft.channel.toUpperCase()}
+                </a>
+              </div>
+            </details>
+          </section>
+        )}
         {/* Submit Action */}
         <div className="checkout-submit-block">
           <Button
@@ -777,17 +671,18 @@ export function CheckoutForm() {
               </>
             ) : (
               <>
-                <MessageCircle size={16} />
-                <span>{orderChannel === "whatsapp" ? "ORDER VIA WHATSAPP" : "CONFIRM ORDER"} · ৳{grandTotal.toLocaleString()} BDT</span>
+                {orderChannel === "instagram" ? (
+                  <Instagram size={19} />
+                ) : (
+                  <MessageCircle size={19} />
+                )}
+                <span>
+                  {`ORDER VIA ${orderChannel.toUpperCase()}`} · ৳
+                  {grandTotal.toLocaleString()} BDT
+                </span>
               </>
             )}
           </Button>
-
-          <p className="checkout-terms-note">
-            By confirming this order, you agree to HIMATU&apos;s{" "}
-            <Link href="/terms">Terms of Service</Link> and{" "}
-            <Link href="/privacy">Privacy Policy</Link>. {orderChannel === "whatsapp" ? "Your name, contact and delivery details will be included in a message to 01797725697. Review it before sending. Stock and delivery estimates require confirmation." : "Please review your order before proceeding."}
-          </p>
         </div>
       </form>
 
@@ -804,12 +699,15 @@ export function CheckoutForm() {
             {cartItems.map(({ product: p, quantity, lineTotal }) => (
               <div key={p.id} className="summary-product-item">
                 <div className="summary-thumbnail-wrap">
-                  <AssetImage asset={assets.product(p)} className="summary-thumbnail" />
+                  <AssetImage
+                    asset={assets.product(p)}
+                    className="summary-thumbnail"
+                  />
                   <span className="summary-quantity-pill">{quantity}</span>
                 </div>
                 <div className="summary-product-meta">
                   <h4 className="summary-product-name">{p.name}</h4>
-                  <p className="summary-product-franchise">{p.franchise}{p.kind === "reference" ? " · Demo price" : ""}</p>
+                  <p className="summary-product-franchise">{p.franchise}</p>
                 </div>
                 <span className="summary-product-price">
                   {formatPrice(lineTotal)}
@@ -849,7 +747,6 @@ export function CheckoutForm() {
 
           {/* Financial Breakdown */}
           <div className="summary-totals-list">
-            {hasDemoPrices && <p className="demo-note">Includes demo prices. Final selling prices will be confirmed by HIMATU before payment.</p>}
             <div className="summary-line">
               <span>Subtotal</span>
               <span>{formatPrice(subtotal)}</span>
@@ -865,22 +762,18 @@ export function CheckoutForm() {
             )}
 
             <div className="summary-line">
-              <span>Shipping ({selectedShipping.title})</span>
-              <span>
-                {isFreeShipping ? (
-                  <span className="free-shipping-text">FREE</span>
-                ) : (
-                  `৳${shippingPrice}`
-                )}
-              </span>
+              <span>Delivery</span>
+              <span>Arranged in chat</span>
             </div>
 
             <div className="summary-divider" />
 
             <div className="summary-line grand-total-line">
-              <span>Total Payable</span>
+              <span>Items estimate</span>
               <div className="grand-total-stack">
-                <span className="grand-total-amount">৳{grandTotal.toLocaleString()}</span>
+                <span className="grand-total-amount">
+                  ৳{grandTotal.toLocaleString()}
+                </span>
                 <span className="grand-total-currency">BDT</span>
               </div>
             </div>
