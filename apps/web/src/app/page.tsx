@@ -1,5 +1,4 @@
 import { CategoryShowcase } from "@/components/collections/CategoryShowcase";
-import { BrandStory } from "@/components/campaigns/BrandStory";
 import { MakingOf } from "@/components/campaigns/MakingOf";
 import {
   HeroCampaign,
@@ -31,7 +30,6 @@ export default function Home() {
       </Container>
       <PrintingCampaign />
       <MakingOf />
-      <BrandStory />
     </div>
   );
 }

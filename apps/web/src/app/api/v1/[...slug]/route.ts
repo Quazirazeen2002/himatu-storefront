@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
  */
 async function forwardToBackend(request: NextRequest, slug: string[]) {
   const apiUrl = process.env.API_URL;
-  const productMutation = (request.method !== "GET" && slug[0] === "admin" && slug[1] === "products") || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff", "content"].includes(slug[1]));
+  const productMutation = (request.method !== "GET" && slug[0] === "admin" && slug[1] === "products") || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff"].includes(slug[1]));
   if (!apiUrl) return productMutation ? NextResponse.json({ message: slug[0] === "social-orders" ? "Order submission is temporarily unavailable. Please try again shortly." : "This dashboard feature requires the API service. Configure API_URL on the storefront and redeploy." }, { status: 503 }) : null;
 
   try {
@@ -657,6 +657,26 @@ export async function GET(
         lowStockThreshold: 5,
         supportEmail: "support@himatu.com",
         supportPhone: "+880 1700 000000",
+      });
+    }
+
+    // /content/hero & /admin/content/hero
+    if (path === "content/hero" || path === "admin/content/hero") {
+      try {
+        const contentRes = await pool.query(
+          `SELECT value FROM "SiteContent" WHERE key = 'hero-media' OR key = 'hero-slides' ORDER BY key ASC LIMIT 1`
+        );
+        if (contentRes.rows.length && contentRes.rows[0].value) {
+          return NextResponse.json(contentRes.rows[0].value);
+        }
+      } catch {}
+      return NextResponse.json({
+        media: {
+          type: "video",
+          src: "/videos/hero-anime.mp4",
+          poster: "/videos/hero-anime-poster.jpg",
+          alt: "HIMATU One Piece Anime Horizontal Cinematic Visual",
+        },
       });
     }
 
@@ -1515,6 +1535,19 @@ export async function PATCH(
       return NextResponse.json(res.rows[0]);
     }
 
+    // 5. /admin/content/hero
+    if (path === "admin/content/hero" || path === "content/hero") {
+      const body = await request.json();
+      const contentValue = body.media ? body : { media: body };
+      await pool.query(
+        `INSERT INTO "SiteContent" (key, value, "updatedAt")
+         VALUES ('hero-media', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = $1, "updatedAt" = NOW()`,
+        [JSON.stringify(contentValue)]
+      );
+      return NextResponse.json(contentValue);
+    }
+
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
@@ -1934,6 +1967,68 @@ export async function POST(
         );
       }
       return NextResponse.json(res.rows[0]);
+    }
+
+    // 11. /admin/content/hero
+    if (path === "admin/content/hero" || path === "content/hero") {
+      const body = await request.json();
+      const contentValue = body.media ? body : { media: body };
+      await pool.query(
+        `INSERT INTO "SiteContent" (key, value, "updatedAt")
+         VALUES ('hero-media', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = $1, "updatedAt" = NOW()`,
+        [JSON.stringify(contentValue)]
+      );
+      return NextResponse.json(contentValue);
+    }
+
+    // 12. /admin/content/hero/upload
+    if (path === "admin/content/hero/upload") {
+      const formData = await request.formData();
+      const file = formData.get("file") as File | null;
+      if (!file) {
+        return NextResponse.json({ error: "No file provided" }, { status: 400 });
+      }
+      const mediaType = file.type.startsWith("video/") ? "video" : "image";
+      const ext = file.name.split(".").pop() || (mediaType === "video" ? "mp4" : "jpg");
+      const filename = `hero/hero-${Date.now()}.${ext}`;
+      const buffer = Buffer.from(await file.arrayBuffer());
+
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabaseUrl = process.env.SUPABASE_URL!;
+      const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY!;
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      const { error: uploadErr } = await supabase.storage
+        .from("product-images")
+        .upload(filename, buffer, {
+          contentType: file.type || (mediaType === "video" ? "video/mp4" : "image/jpeg"),
+          upsert: true,
+        });
+
+      if (uploadErr) {
+        return NextResponse.json({ error: uploadErr.message }, { status: 500 });
+      }
+
+      const { data: pubData } = supabase.storage
+        .from("product-images")
+        .getPublicUrl(filename);
+
+      const mediaPayload = {
+        type: mediaType,
+        src: pubData.publicUrl,
+        alt: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " "),
+      };
+
+      const contentValue = { media: mediaPayload };
+      await pool.query(
+        `INSERT INTO "SiteContent" (key, value, "updatedAt")
+         VALUES ('hero-media', $1, NOW())
+         ON CONFLICT (key) DO UPDATE SET value = $1, "updatedAt" = NOW()`,
+        [JSON.stringify(contentValue)]
+      );
+
+      return NextResponse.json(contentValue);
     }
 
     return NextResponse.json({ ok: true });

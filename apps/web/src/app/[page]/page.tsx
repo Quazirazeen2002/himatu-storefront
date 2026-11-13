@@ -2,13 +2,16 @@ import { ContactForm } from "@/components/services/ContactForm";
 import { notFound } from "next/navigation";
 import { information } from "@/lib/config";
 import { Container, ButtonLink } from "@/components/ui/Primitives";
+import { AboutPage } from "@/components/campaigns/AboutPage";
+import type { Metadata } from "next";
 export function generateStaticParams() { return Object.keys(information).map(page => ({page})); }
+export async function generateMetadata({params}:{params:Promise<{page:string}>}):Promise<Metadata> { const {page}=await params; return { title: page === "about" ? "About HIMATU" : information[page]?.title || "HIMATU" }; }
 export default async function Info({params}:{params:Promise<{page:string}>}) {
   const {page}=await params;
   const content=information[page];
   if(!content)notFound();
+  if(page==="about") return <AboutPage />;
   return <Container className="info-page"><p className="eyebrow">HIMATU / {page.replaceAll("-"," ")}</p><h1>{content.title}</h1><p className="info-body">{content.body}</p>
-    {page==="about" && <section className="info-details"><h2>A place for your fandom.</h2><p>From One Piece and Naruto to Dragon Ball, Jujutsu Kaisen and Demon Slayer, HIMATU brings the focus back to characters, stories and the joy of collecting.</p><h2>Discover. Collect. Display.</h2><p>Explore figures, keychains, display swords, T-shirts and accessories, or share your own idea for a custom 3D printing project.</p></section>}
     {page==="contact" && <ContactForm />}
     {page==="faqs" && <section className="info-details">{[
       ["How do I place an order?","Add your selections to the bag, create an account or sign in, and complete your delivery details. Submit your order request securely on the website and choose your preferred contact channel. HIMATU will review the items and contact you to confirm pricing, delivery and payment details. Sending a separate chat message is optional."],

@@ -97,6 +97,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* Both palettes share the same typography, components and interactions. */
 :root[data-theme="light"] {
+ --accent:#15803d;
+ --danger:#b42323;
  --background:#FFFFFF;
  --surface:#F5F5F5;
  --elevated:#EEEEEE;

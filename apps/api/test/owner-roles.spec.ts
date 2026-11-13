@@ -1,0 +1,11 @@
+import "reflect-metadata";
+import { SocialOrdersController } from "../src/social-orders/social-orders.controller";
+import { SocialOrdersService } from "../src/social-orders/social-orders.service";
+import { PrismaService } from "../src/prisma/prisma.service";
+const tx={siteContent:{findUnique:jest.fn().mockResolvedValue({value:{userId:"owner"}})},userProfile:{findUnique:jest.fn().mockResolvedValue({role:"ADMIN"}),count:jest.fn().mockResolvedValue(4),update:jest.fn().mockResolvedValue({id:"staff",role:"MODERATOR"})}};
+const db={...tx,$transaction:jest.fn(async(fn:(client:typeof tx)=>unknown)=>fn(tx))};
+const controller=new SocialOrdersController({} as SocialOrdersService,{db} as unknown as PrismaService);
+beforeEach(()=>{jest.clearAllMocks();tx.siteContent.findUnique.mockResolvedValue({value:{userId:"owner"}});});
+it("allows the permanent owner to assign existing staff roles",async()=>{await expect(controller.role({id:"owner"},"staff",{role:"MODERATOR"})).resolves.toMatchObject({role:"MODERATOR"});expect(tx.userProfile.update).toHaveBeenCalled();});
+it("blocks other admins and fails closed before ownership is configured",async()=>{await expect(controller.role({id:"another-admin"},"staff",{role:"ADMIN"})).rejects.toThrow("Only the store owner");tx.siteContent.findUnique.mockResolvedValue(null);await expect(controller.role({id:"owner"},"staff",{role:"ADMIN"})).rejects.toThrow("Only the store owner");expect(tx.userProfile.update).not.toHaveBeenCalled();});
+it("protects the owner from another administrator and self-demotion",async()=>{await expect(controller.role({id:"another-admin"},"owner",{role:"CUSTOMER"})).rejects.toThrow();await expect(controller.role({id:"owner"},"owner",{role:"CUSTOMER"})).rejects.toThrow();expect(tx.userProfile.update).not.toHaveBeenCalled();});

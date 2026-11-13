@@ -200,7 +200,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session || !["ADMIN", "MODERATOR"].includes(session.user.role)) {
+  if (!session || !session.user || !["ADMIN", "MODERATOR"].includes(session.user.role)) {
     return null;
   }
 
@@ -220,7 +220,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
     "/admin/social-orders",
   ];
   if (
-    session.user.role === "MODERATOR" &&
+    session.user?.role === "MODERATOR" &&
     !permittedPaths.some(
       (path) => pathname === path || pathname.startsWith(`${path}/`),
     )
@@ -261,7 +261,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
           >
             <span className="admin-wordmark-title">HIMATU</span>
             {!isCollapsed && (
-              <span className="admin-owner-tag">{session.user.role}</span>
+              <span className="admin-owner-tag">{session.user?.role || "ADMIN"}</span>
             )}
           </Link>
           <button
@@ -283,7 +283,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 {items
                   .filter(
                     (item) =>
-                      session.user.role === "ADMIN" ||
+                      session.user?.role === "ADMIN" ||
                       permittedPaths.includes(item.href),
                   )
                   .map((item) => {
@@ -372,7 +372,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             <div className="admin-breadcrumbs">
               <span>HIMATU Admin</span>
               <span>/</span>
-              <span>{currentNav.label}</span>
+              <span>{currentNav?.label || "Overview"}</span>
             </div>
           </div>
 
@@ -388,8 +388,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Link>
 
             <div className="admin-header-user">
-              <div className="admin-user-avatar" title={session.user.fullName}>
-                {session.user.fullName
+              <div className="admin-user-avatar" title={session.user?.fullName || "Admin"}>
+                {session.user?.fullName
                   ? session.user.fullName.slice(0, 2).toUpperCase()
                   : "AD"}
               </div>

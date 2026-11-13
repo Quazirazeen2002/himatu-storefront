@@ -71,3 +71,4 @@ describe("Hero Anime Video and Navigation Dropdown Fixes", () => {
     expect(globalsCss).toContain(".nav-item:not(.is-open) .nav-dropdown");
   });
 });
+

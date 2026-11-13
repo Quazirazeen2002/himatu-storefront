@@ -83,6 +83,11 @@ describe("Social order boundary", () => {
     expect(res.status).toBe(201);
     expect(service.submit).toHaveBeenCalledWith("customer", input);
   });
+  it("accepts direct website requests with original and sale price snapshots", async () => {
+    const payload={...input,channel:"website",items:input.items.map(item=>({...item,originalUnitPrice:1200}))};
+    expect((await request(app.getHttpServer()).post("/social-orders").send(payload)).status).toBe(201);
+    expect(service.submit).toHaveBeenLastCalledWith("customer",payload);
+  });
   it("does not allow customers into the inbox", async () => {
     expect(
       (await request(app.getHttpServer()).get("/admin/social-orders")).status,

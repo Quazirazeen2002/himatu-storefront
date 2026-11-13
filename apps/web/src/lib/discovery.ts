@@ -57,7 +57,7 @@ export function discover(catalog: Product[], filters: Filters, sort: string) {
         : 0;
   });
 }
-export const PAGE_SIZE = 9;
+export const PAGE_SIZE = 16;
 export function paginate<T>(items: T[], requested: number) {
   const pages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
   const page = Math.min(

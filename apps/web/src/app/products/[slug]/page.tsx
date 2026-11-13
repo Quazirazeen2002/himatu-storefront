@@ -5,7 +5,7 @@ import type { Product } from "@/lib/types";
 import { StockStatus } from "@/components/products/StockStatus";
 export const dynamic = "force-dynamic";
 import { ProductEnquiry } from "@/components/products/ProductEnquiry";
-import { catalogue, concepts, CONCEPT_LABEL } from "@/lib/catalogue";
+import { catalogue, CONCEPT_LABEL } from "@/lib/catalogue";
 import { WishlistButton } from "@/components/commerce/Commerce";
 import { notFound, redirect } from "next/navigation";
 import {
@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/Primitives";
 import { ProductGrid } from "@/components/products/ProductCard";
 export function generateStaticParams() {
-  return [...catalogue, ...concepts].map((p) => ({ slug: p.id }));
+  return catalogue.map((p) => ({ slug: p.id }));
 }
 export default async function ProductDetail({
   params,
@@ -30,12 +30,12 @@ export default async function ProductDetail({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  let p: Product | undefined = [...catalogue, ...concepts].find((p) => p.id === slug);
+  let p: Product | undefined = catalogue.find((p) => p.id === slug);
   try {
     p = toStorefrontProduct(await getProductBySlug(slug));
   } catch (error) {
     // A deliberate archive/404 must not resurrect a legacy figure.
-    if (error instanceof CommerceApiError && error.status === 404 && p?.kind !== "reference" && p?.kind !== "concept") p = undefined;
+    if (error instanceof CommerceApiError && error.status === 404) p = undefined;
     if (!p && !(error instanceof CommerceApiError && error.status === 404)) throw error;
   }
   if (!p) {

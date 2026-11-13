@@ -30,7 +30,7 @@ export default function AdminError({
     >
       <AlertCircle
         size={44}
-        style={{ color: "var(--admin-accent, #d92727)", margin: "0 auto 16px" }}
+        style={{ color: "var(--admin-danger, #b42323)", margin: "0 auto 16px" }}
       />
       <h2
         style={{

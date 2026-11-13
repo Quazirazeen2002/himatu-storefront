@@ -15,7 +15,7 @@
 .hstory-chapter-links a[aria-current] .hstory-nav-letter { color: var(--accent); }
 .hstory-nav-active { position: absolute; inset: 0; border: 1px solid var(--story-line); background: var(--elevated); z-index: -1; }
 .hstory-progress { position: absolute; height: 2px; bottom: -1px; left: 0; width: 100%; background: var(--border); }
-.hstory-progress-fill { display: block; height: 100%; background: var(--accent); transform-origin: left; transform: scaleX(0); }
+.hstory-progress-fill { display: block; height: 100%; background: var(--accent-fill); transform-origin: left; transform: scaleX(0); }
 .hstory-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(48px, 7vw, 110px); padding: 0 var(--page-margin); max-width: 1600px; margin: 0 auto; align-items: start; }
 .hstory-stage { position: sticky; top: 156px; height: min(680px, calc(100svh - 195px)); min-height: 480px; display: flex; flex-direction: column; min-width: 0; margin-block: 50px; z-index: 1; }
 .hstory[data-enhanced="true"] .hstory-stage { position: relative; top: 0; }

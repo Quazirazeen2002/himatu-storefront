@@ -15,3 +15,9 @@ it("starts a fresh request for another purchase after staff close the previous r
  const bodies=fetcher.mock.calls.map(([,options])=>JSON.parse(String(options?.body)));expect(bodies[0].clientReference).not.toBe(bodies[1].clientReference);
 });
 it("fails when dashboard registration fails instead of reporting a prepared order",async()=>{jest.spyOn(global,"fetch").mockResolvedValue(new Response(JSON.stringify({message:"API unavailable"}),{status:503}));await expect(registerSocialOrder("token",input)).rejects.toThrow("API unavailable");});
+
+it("registers a direct website order without dropping original and sale prices",async()=>{
+ const fetcher=jest.spyOn(global,"fetch").mockResolvedValue(new Response(JSON.stringify({id:"website-request",status:"PENDING"}),{status:201}));
+ await registerSocialOrder("token",{...input,channel:"website",items:[{...input.items[0],originalUnitPrice:1200}]});
+ expect(JSON.parse(String(fetcher.mock.calls[0][1]?.body))).toMatchObject({channel:"website",items:[{unitPrice:1000,originalUnitPrice:1200}]});
+});

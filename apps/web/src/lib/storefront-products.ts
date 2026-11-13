@@ -37,8 +37,5 @@ export function toStorefrontProduct(item: ProductDto): FigureProduct {
 
 export function mergeStorefrontProducts(items: ProductDto[]): Product[] {
   const active = items.filter(item => item.isActive).map(toStorefrontProduct);
-  // Source-attributed demo references remain separate; database-managed figures are authoritative.
-  const managedSlugs = new Set(items.map(item => item.slug));
-  const managedNames = new Set(items.map(item => item.name));
-  return [...active, ...catalogue.filter(item => item.kind === "reference" && !managedSlugs.has(item.id) && !managedNames.has(item.name))];
+  return active;
 }

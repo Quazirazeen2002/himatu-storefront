@@ -38,3 +38,7 @@ it("loads every backend page rather than truncating the storefront at fifty prod
     expect(global.fetch).toHaveBeenLastCalledWith(expect.stringContaining("page=2"),expect.anything());
   } finally { global.fetch = originalFetch; }
 });
+
+it("does not publish former sample references when the managed catalogue is empty", () => {
+  expect(mergeStorefrontProducts([])).toEqual([]);
+});

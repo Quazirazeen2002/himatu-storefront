@@ -137,7 +137,7 @@ export async function getProducts(query: ProductQuery = {}): Promise<PaginatedPr
   return request<PaginatedProducts>(`/products${qs ? `?${qs}` : ""}`);
 }
 
-/** Load every API page so local search, filters and nine-item pagination see new products. */
+/** Load every API page so local search, filters and sixteen-item pagination see new products. */
 export async function getAllProducts(): Promise<ProductDto[]> {
   const first = await getProducts({ limit: 50 });
   const items = [...first.items];
@@ -185,6 +185,10 @@ export async function updateAdminProduct(token: string, id: string, data: any): 
     body: JSON.stringify(data),
     token,
   });
+}
+
+export async function deleteAdminProduct(token: string, id: string): Promise<{success:boolean;id:string}> {
+  return request(`/admin/products/${encodeURIComponent(id)}/permanent`, {method:"DELETE", token});
 }
 
 export async function archiveAdminProduct(token: string, id: string): Promise<ProductDto> {
@@ -851,3 +855,16 @@ export async function uploadCategoryImage(token: string, id: string, file: File,
 }
 
 export { request as commerceRequest };
+
+export async function getInvoicePdfUrl(token: string, orderId: string) {
+  const response = await fetch(`${getApiBase()}/api/v1/admin/invoices/${encodeURIComponent(orderId)}/pdf`, {
+    headers: {Authorization:`Bearer ${token}`}, cache:"no-store",
+  });
+  if (!response.ok) { const error = await response.json().catch(() => ({})); throw new Error(error.message || "Invoice download failed"); }
+  return URL.createObjectURL(await response.blob());
+}
+export async function downloadInvoicePdf(token: string, orderId: string) {
+  const url = await getInvoicePdfUrl(token, orderId);
+  const link = document.createElement("a"); link.href = url; link.download = `HIMATU-Invoice-${orderId}.pdf`; document.body.appendChild(link); link.click(); link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

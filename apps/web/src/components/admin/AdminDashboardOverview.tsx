@@ -202,7 +202,7 @@ export function AdminDashboardOverview() {
                 style={{
                   fontSize: "10px",
                   fontWeight: 700,
-                  background: "#d92727",
+                  background: "var(--admin-accent)",
                   color: "#ffffff",
                   padding: "1px 6px",
                   borderRadius: "4px",

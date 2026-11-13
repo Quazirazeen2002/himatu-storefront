@@ -9,7 +9,7 @@ export interface WhatsAppOrder {
   customer: { fullName: string; email: string; phone: string; address: string; area: string; district: string; postalCode: string; orderNotes: string };
   items: { name: string; character: string; quantity: number; unitPrice: number; slug: string }[];
   subtotal: number; discount: number; shipping: number; total: number;
-  shippingPending?: boolean; shippingMethod?: string; paymentMethod?: string; origin: string;
+  discountLabel?: string; shippingPending?: boolean; shippingMethod?: string; paymentMethod?: string; origin: string;
 }
 export function formatWhatsAppOrder(order: WhatsAppOrder) {
   const c = order.customer;
@@ -23,7 +23,7 @@ export function formatWhatsAppOrder(order: WhatsAppOrder) {
       `${order.origin}/products/${encodeURIComponent(item.slug)}`, "",
     ]),
     "*ORDER SUMMARY*", `Subtotal: ${money(order.subtotal)}`,
-    ...(order.discount ? [`Extra discount: −${money(order.discount)}`] : []),
+    ...(order.discount ? [`${order.discountLabel || "Extra discount"}: −${money(order.discount)}`] : []),
     order.shippingPending ? "Delivery: arranged with HIMATU" : `Delivery estimate: ${money(order.shipping)}`, `*${order.shippingPending ? "Items estimate" : "Estimated total"}: ${money(order.total)}*`, "",
     "*CUSTOMER*", `Name: ${clean(c.fullName)}`, `Phone: ${clean(c.phone)}`, `Email: ${clean(c.email)}`, "",
     "*DELIVERY*", clean(c.address), `${clean(c.area)}, ${clean(c.district)}`,

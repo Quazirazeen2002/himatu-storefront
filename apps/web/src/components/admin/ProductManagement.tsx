@@ -14,6 +14,7 @@ import {
   ArrowDown,
   Edit2,
   Boxes,
+  Archive,
   CheckCircle2,
   AlertCircle,
   X,
@@ -26,6 +27,7 @@ import {
   createAdminProduct,
   updateAdminProduct,
   archiveAdminProduct,
+  deleteAdminProduct,
   adjustAdminInventory,
   uploadProductImages,
   updateProductImage,
@@ -37,6 +39,7 @@ import { slugForProductName } from "@/lib/product-form";
 
 export function ProductManagement() {
   const [session, setSession] = useState<CustomerSession | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [products, setProducts] = useState<ProductDto[]>([]);
   const [categories, setCategories] = useState<CategoryDto[]>([]);
@@ -288,6 +291,20 @@ export function ProductManagement() {
     }
   };
 
+  const handleDelete = async (product: ProductDto) => {
+    if (!session?.accessToken || deletingId) return;
+    if (!window.confirm(`Permanently delete "${product.name}"?\n\nThis removes the product from the catalogue, inventory, bags and wishlists. Existing order and invoice records remain. This cannot be undone.`)) return;
+    setDeletingId(product.id);
+    try {
+      await deleteAdminProduct(session.accessToken, product.id);
+      window.dispatchEvent(new Event("himatu:catalogue-updated"));
+      showFeedback("success", `Deleted "${product.name}".`);
+      if (products.length === 1 && page > 1) setPage(page - 1);
+      else await loadData(session.accessToken);
+    } catch (error) { showFeedback("error", error instanceof Error ? error.message : "Product could not be deleted."); }
+    finally { setDeletingId(null); }
+  };
+
   // Adjust Stock
   const handleStockAdjust = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -397,7 +414,7 @@ export function ProductManagement() {
   if (!session || !["ADMIN", "MODERATOR"].includes(session.user.role)) {
     return (
       <div style={{ padding: "60px 20px", textAlign: "center" }}>
-        <AlertCircle size={48} style={{ color: "var(--admin-accent, #d92727)", margin: "0 auto 16px" }} />
+        <AlertCircle size={48} style={{ color: "var(--admin-danger, #b42323)", margin: "0 auto 16px" }} />
         <h2 style={{ fontSize: "20px", fontWeight: 800, marginBottom: "8px" }}>RESTRICTED ACCESS</h2>
         <p style={{ color: "var(--admin-muted)", marginBottom: "24px" }}>
           This product management console requires verified administrator privileges.
@@ -424,7 +441,7 @@ export function ProductManagement() {
         <div className="admin-page-actions">
           <button type="button" className="admin-btn admin-btn--primary" onClick={openCreate}>
             <Plus size={15} />
-            <span>+ Add Product</span>
+            <span>Add Product</span>
           </button>
         </div>
       </div>
@@ -439,8 +456,8 @@ export function ProductManagement() {
             fontSize: "13px",
             fontWeight: 700,
             background: feedback.type === "success" ? "var(--admin-success-soft)" : "rgba(217, 39, 39, 0.08)",
-            color: feedback.type === "success" ? "var(--admin-success)" : "var(--admin-accent)",
-            border: `1px solid ${feedback.type === "success" ? "var(--admin-success)" : "var(--admin-accent)"}`,
+            color: feedback.type === "success" ? "var(--admin-success)" : "var(--admin-danger)",
+            border: `1px solid ${feedback.type === "success" ? "var(--admin-success)" : "var(--admin-danger)"}`,
             display: "flex",
             alignItems: "center",
             gap: "10px",
@@ -702,15 +719,10 @@ export function ProductManagement() {
 
                       {/* Price */}
                       <td>
-                        <div style={{ display: "flex", flexDirection: "column" }}>
-                          <span style={{ fontWeight: 800, fontSize: "13px" }}>
-                            {formatBDT(prod.price)}
-                          </span>
-                          {prod.salePrice && prod.salePrice < prod.price && (
-                            <span style={{ fontSize: "11px", color: "var(--admin-muted)", textDecoration: "line-through" }}>
-                              {formatBDT(prod.salePrice)}
-                            </span>
-                          )}
+                        <div className="admin-price-stack">
+                          <span className={prod.salePrice && prod.salePrice < prod.price ? "admin-original-price" : ""}>Original · {formatBDT(prod.price)}</span>
+                          <strong>Sale · {formatBDT(prod.salePrice && prod.salePrice < prod.price ? prod.salePrice : prod.price)}</strong>
+                          {prod.salePrice && prod.salePrice < prod.price ? <small className="admin-price-saving">Save {Math.round((1 - prod.salePrice / prod.price) * 100)}%</small> : null}
                         </div>
                       </td>
 
@@ -779,11 +791,13 @@ export function ProductManagement() {
                               className="admin-btn admin-btn--danger"
                               style={{ height: "30px", padding: "0 8px", fontSize: "11px" }}
                               onClick={() => handleArchive(prod)}
-                              title="Archive figure"
+                              title="Archive product"
+                              aria-label={`Archive ${prod.name}`}
                             >
-                              <Trash2 size={12} />
+                              <Archive size={12} />
                             </button>
                           )}
+                          <button type="button" className="admin-btn admin-btn--danger" style={{height:"30px",padding:"0 10px",fontSize:"11px"}} disabled={!!deletingId} onClick={() => handleDelete(prod)} aria-label={`Delete ${prod.name}`} title="Permanently delete product"><Trash2 size={12} />{deletingId === prod.id ? "Deleting…" : "Delete"}</button>
                         </div>
                       </td>
                     </tr>
@@ -1186,7 +1200,7 @@ export function ProductManagement() {
                   </div>
                 )}
                 {uploadError && (
-                  <p style={{ color: "var(--admin-accent)", fontSize: "12px", fontWeight: 700, marginTop: "10px" }}>
+                  <p style={{ color: "var(--admin-danger)", fontSize: "12px", fontWeight: 700, marginTop: "10px" }}>
                     {uploadError}
                   </p>
                 )}
@@ -1227,7 +1241,7 @@ export function ProductManagement() {
                                 position: "absolute",
                                 top: "8px",
                                 left: "8px",
-                                background: "var(--admin-accent, #d92727)",
+                                background: "var(--admin-accent, #15803d)",
                                 color: "#ffffff",
                                 fontSize: "10px",
                                 fontWeight: 800,

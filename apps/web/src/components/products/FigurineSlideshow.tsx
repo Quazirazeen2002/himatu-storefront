@@ -18,7 +18,7 @@ const subscribeMotion = (notify: () => void) => {
   return () => media.removeEventListener("change", notify);
 };
 const motionSnapshot = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const visibleCount = () => window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 3;
+const visibleCount = () => window.innerWidth < 640 ? 1 : window.innerWidth < 1024 ? 2 : 4;
 
 export function FigurineSlideshow({ products = defaultProducts }: { products?: Product[] }) {
   const store = useStore();
@@ -28,7 +28,7 @@ export function FigurineSlideshow({ products = defaultProducts }: { products?: P
   const [paused, setPaused] = useState(false);
   const [hovered, setHovered] = useState(false);
   const touch = useRef<number | null>(null);
-  const visible = useSyncExternalStore(subscribe, visibleCount, () => 3);
+  const visible = useSyncExternalStore(subscribe, visibleCount, () => 4);
   const max = Math.max(0, products.length - visible);
   const current = Math.min(index, max);
   const step = (direction: number) => {

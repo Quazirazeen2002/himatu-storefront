@@ -1,5 +1,6 @@
 import "./admin.css";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { AdminBoundary } from "@/components/admin/AdminBoundary";
 
 export const metadata = {
   title: "Store Owner Control Center · HIMATU Admin",
@@ -7,6 +8,9 @@ export const metadata = {
 };
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  return <AdminShell>{children}</AdminShell>;
+  return (
+    <AdminBoundary>
+      <AdminShell>{children}</AdminShell>
+    </AdminBoundary>
+  );
 }
-

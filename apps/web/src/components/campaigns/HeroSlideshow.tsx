@@ -1,95 +1,69 @@
 "use client";
 
 import Image from "next/image";
-import { Pause, Play, ArrowLeft, ArrowRight, Volume2, VolumeX } from "lucide-react";
+import { Pause, Play, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { figurePhotos } from "@/lib/assets";
 
-export interface HeroSlideItem {
-  id: string;
+export interface HeroMediaItem {
+  id?: string;
   type: "video" | "image";
   src: string;
   poster?: string;
   alt: string;
 }
 
-const defaultSlides: HeroSlideItem[] = [
-  {
-    id: "hero-video-one-piece",
-    type: "video",
-    src: "/videos/hero-anime.mp4",
-    poster: "/videos/hero-anime-poster.jpg",
-    alt: "HIMATU One Piece Anime Cinematic Visual",
-  },
-  {
-    id: "hero-photo-1",
-    type: "image",
-    src: figurePhotos["luffy-gear-five-action"].src!,
-    alt: figurePhotos["luffy-gear-five-action"].alt,
-  },
-  {
-    id: "hero-photo-2",
-    type: "image",
-    src: figurePhotos["zoro-asura"].src!,
-    alt: figurePhotos["zoro-asura"].alt,
-  },
-  {
-    id: "hero-photo-3",
-    type: "image",
-    src: figurePhotos["zoro-three-sword-style"].src!,
-    alt: figurePhotos["zoro-three-sword-style"].alt,
-  },
-  {
-    id: "hero-photo-4",
-    type: "image",
-    src: figurePhotos["straw-hat-captain"].src!,
-    alt: figurePhotos["straw-hat-captain"].alt,
-  },
-];
+const defaultMedia: HeroMediaItem = {
+  id: "hero-video-one-piece",
+  type: "video",
+  src: "/videos/hero-anime.mp4",
+  poster: "/videos/hero-anime-poster.jpg",
+  alt: "HIMATU One Piece Anime Horizontal Cinematic Visual",
+};
 
 export function HeroSlideshow() {
-  const [slides, setSlides] = useState<HeroSlideItem[]>(defaultSlides);
-  const [current, setCurrent] = useState(0);
+  const [media, setMedia] = useState<HeroMediaItem>(defaultMedia);
   const [paused, setPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [reduced, setReduced] = useState(false);
-  const [interacting, setInteracting] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Sync video play/pause with carousel state
+  // Sync play/pause with user action
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    if (!video || media.type !== "video") return;
 
-    if (current === 0) {
-      if (paused) {
-        video.pause();
-      } else {
-        video.play().catch(() => {});
-      }
-    } else {
+    if (paused) {
       video.pause();
+    } else {
+      video.play().catch(() => {});
     }
-  }, [current, paused]);
+  }, [paused, media.type]);
 
+  // Fetch admin configured hero media if set
   useEffect(() => {
     let active = true;
     fetch("/api/v1/content/hero", { cache: "no-store" })
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
-        if (active && Array.isArray(data?.slides) && data.slides.length) {
-          const apiSlides: HeroSlideItem[] = data.slides.map(
-            (s: { src: string; alt: string; type?: "video" | "image"; poster?: string }, i: number) => ({
-              id: `hero-${i}`,
-              type: s.type || (s.src?.endsWith(".mp4") ? "video" : "image"),
-              src: s.src,
-              poster: s.poster,
-              alt: s.alt,
-            })
-          );
-          const hasVideo = apiSlides.some((s) => s.type === "video");
-          const finalSlides = hasVideo ? apiSlides : [defaultSlides[0], ...apiSlides];
-          setSlides(finalSlides);
+        if (!active || !data) return;
+        if (data.media && data.media.src) {
+          setMedia({
+            id: "hero-admin-media",
+            type: data.media.type || (data.media.src.endsWith(".mp4") ? "video" : "image"),
+            src: data.media.src,
+            poster: data.media.poster || "/videos/hero-anime-poster.jpg",
+            alt: data.media.alt || "HIMATU Anime Hero Visual",
+          });
+        } else if (Array.isArray(data.slides) && data.slides.length) {
+          // Backward compatibility with legacy slide arrays: pick first item
+          const first = data.slides[0];
+          setMedia({
+            id: "hero-slide-0",
+            type: first.type || (first.src?.endsWith(".mp4") ? "video" : "image"),
+            src: first.src,
+            poster: first.poster || "/videos/hero-anime-poster.jpg",
+            alt: first.alt || "HIMATU Anime Hero Visual",
+          });
         }
       })
       .catch(() => {});
@@ -98,27 +72,14 @@ export function HeroSlideshow() {
     };
   }, []);
 
+  // Respect prefers-reduced-motion
   useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(media.matches);
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setReduced(mediaQuery.matches);
     update();
-    media.addEventListener("change", update);
-    return () => media.removeEventListener("change", update);
+    mediaQuery.addEventListener("change", update);
+    return () => mediaQuery.removeEventListener("change", update);
   }, []);
-
-  useEffect(() => {
-    if (paused || reduced || interacting) return;
-    // Allow the 8-second video to fully play out when on slide 0
-    const delay = current === 0 ? 8500 : 6000;
-    const timer = window.setInterval(() => {
-      if (!document.hidden) setCurrent((index) => (index + 1) % slides.length);
-    }, delay);
-    return () => window.clearInterval(timer);
-  }, [paused, reduced, interacting, slides.length, current]);
-
-  function select(index: number) {
-    setCurrent((index + slides.length) % slides.length);
-  }
 
   const toggleSound = () => {
     const video = videoRef.current;
@@ -127,93 +88,68 @@ export function HeroSlideshow() {
     video.muted = nextMuted;
     setIsMuted(nextMuted);
     if (!nextMuted) {
-      video.volume = 0.8;
+      video.volume = 0.85;
       video.play().catch(() => {});
     }
   };
 
   return (
     <div
-      className={`hero-slideshow ${paused || reduced || interacting ? "is-paused" : ""}`}
+      className="hero-slideshow"
       role="region"
-      aria-roledescription="carousel"
-      aria-label="HIMATU anime visual and product photography"
-      onFocusCapture={() => setInteracting(true)}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) setInteracting(false);
-      }}
+      aria-label="HIMATU anime visual showcase"
     >
-      {slides.map((asset, index) => (
-        <div
-          key={asset.id}
-          className={`hero-photo-slide ${index === current ? "is-active" : ""}`}
-          aria-hidden={index !== current}
-        >
-          {asset.type === "video" ? (
-            <video
-              ref={videoRef}
-              src={asset.src}
-              poster={asset.poster}
-              autoPlay
-              muted={isMuted}
-              loop
-              playsInline
-              preload="auto"
-              className="hero-video-element"
-            />
-          ) : (
-            <Image
-              unoptimized={asset.src?.startsWith("https://")}
-              src={asset.src!}
-              alt={asset.alt}
-              fill
-              sizes="100vw"
-              preload={index === 0}
-              loading={index === 1 ? "eager" : "lazy"}
-            />
-          )}
-        </div>
-      ))}
-      <div className="hero-photo-shade" />
-      <div className="hero-slide-controls">
-        <span className="hero-slide-count" aria-live={paused ? "polite" : "off"}>
-          0{current + 1}
-          <span> / 0{slides.length}</span>
-        </span>
-        <button
-          type="button"
-          aria-label="Previous hero visual"
-          onClick={() => select(current - 1)}
-        >
-          <ArrowLeft size={17} />
-        </button>
-        <button
-          type="button"
-          aria-label="Next hero visual"
-          onClick={() => select(current + 1)}
-        >
-          <ArrowRight size={17} />
-        </button>
-        {!reduced && (
-          <button
-            type="button"
-            aria-label={paused ? "Play hero slideshow" : "Pause hero slideshow"}
-            onClick={() => {
-              setPaused(!paused);
-              if (paused) setInteracting(false);
-            }}
-          >
-            {paused ? <Play size={15} /> : <Pause size={15} />}
-          </button>
+      <div className="hero-photo-slide is-active" aria-hidden="false">
+        {media.type === "video" ? (
+          <video
+            ref={videoRef}
+            src={media.src}
+            poster={media.poster}
+            autoPlay
+            muted={isMuted}
+            loop
+            playsInline
+            preload="auto"
+            className="hero-video-element"
+          />
+        ) : (
+          <Image
+            unoptimized={media.src?.startsWith("https://")}
+            src={media.src}
+            alt={media.alt}
+            fill
+            sizes="100vw"
+            priority
+            loading="eager"
+          />
         )}
-        {current === 0 && slides[0].type === "video" && (
+      </div>
+
+      <div className="hero-photo-shade" />
+
+      {/* Hero media controls: Sound and Play/Pause */}
+      <div className="hero-slide-controls">
+        {media.type === "video" && (
           <button
             type="button"
+            className="hero-media-btn"
             aria-label={isMuted ? "Unmute anime audio" : "Mute anime audio"}
             onClick={toggleSound}
-            title={isMuted ? "Sound On" : "Mute Sound"}
+            title={isMuted ? "Unmute Sound" : "Mute Sound"}
           >
-            {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+          </button>
+        )}
+
+        {media.type === "video" && !reduced && (
+          <button
+            type="button"
+            className="hero-media-btn"
+            aria-label={paused ? "Play anime video" : "Pause anime video"}
+            onClick={() => setPaused(!paused)}
+            title={paused ? "Play Video" : "Pause Video"}
+          >
+            {paused ? <Play size={16} /> : <Pause size={16} />}
           </button>
         )}
       </div>

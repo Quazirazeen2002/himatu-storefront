@@ -1,0 +1,83 @@
+[
+  {
+    "slug": "naruto",
+    "url": "https://www.pinterest.com/pin/650770214948182277/",
+    "og:image": "https://i.pinimg.com/736x/a2/aa/18/a2aa189d5cb7afc9720f2d76973b3000.jpg",
+    "local": "/images/collections/naruto-cover.webp",
+    "width": 1308,
+    "height": 736,
+    "rotation": 90
+  },
+  {
+    "slug": "attack-on-titan",
+    "url": "https://www.pinterest.com/pin/1107533733400934728/",
+    "og:image": "https://i.pinimg.com/736x/3b/c2/df/3bc2dfdaa0cca6f506b3c4751b7c0c6f.jpg",
+    "local": "/images/collections/attack-on-titan-cover.webp",
+    "width": 736,
+    "height": 414,
+    "rotation": 0
+  },
+  {
+    "slug": "demon-slayer",
+    "url": "https://www.pinterest.com/pin/912190099558322758/",
+    "og:image": "https://i.pinimg.com/736x/61/7e/db/617edbf28cc3a9249fa5a8b89d43346a.jpg",
+    "local": "/images/collections/demon-slayer-cover.webp",
+    "width": 1300,
+    "height": 736,
+    "rotation": 90
+  },
+  {
+    "slug": "one-piece",
+    "url": "https://www.pinterest.com/pin/883831495602458809/",
+    "og:image": "https://i.pinimg.com/736x/c5/cb/4d/c5cb4d41b3152e8006af516efd3254b2.jpg",
+    "local": "/images/collections/one-piece-cover.webp",
+    "width": 1280,
+    "height": 720,
+    "rotation": 90
+  },
+  {
+    "slug": "katanas",
+    "url": "https://www.pinterest.com/pin/603834262588076707/",
+    "og:image": "https://i.pinimg.com/736x/0c/a2/33/0ca233027d0e0201f80c174e81ce3c0d.jpg",
+    "local": "/images/collections/katanas-cover.webp",
+    "width": 736,
+    "height": 1307,
+    "rotation": 0
+  },
+  {
+    "slug": "keychains",
+    "url": "https://www.pinterest.com/pin/4606197358265142848/",
+    "og:image": "https://i.pinimg.com/736x/9e/46/73/9e46734e727776742da3f57ce9305dad.jpg",
+    "local": "/images/collections/keychains-cover.webp",
+    "width": 736,
+    "height": 736,
+    "rotation": 0
+  },
+  {
+    "slug": "jujutsu-kaisen",
+    "url": "https://www.pinterest.com/pin/1097752477961566647/",
+    "og:image": "https://i.pinimg.com/736x/92/01/4c/92014cfd5e1e899b2a611e5421904d4d.jpg",
+    "local": "/images/collections/jujutsu-kaisen-cover.webp",
+    "width": 1308,
+    "height": 736,
+    "rotation": 90
+  },
+  {
+    "slug": "dragon-ball",
+    "url": "https://www.pinterest.com/pin/1119566788644643282/",
+    "og:image": "https://i.pinimg.com/736x/57/c4/55/57c45557d879a1c129768861dd81f3fb.jpg",
+    "local": "/images/collections/dragon-ball-cover.webp",
+    "width": 1307,
+    "height": 735,
+    "rotation": 90
+  },
+  {
+    "slug": "blue-lock",
+    "url": "https://www.pinterest.com/pin/751608625346020264/",
+    "og:image": "https://i.pinimg.com/736x/f8/bb/21/f8bb21d5f92714bdc13062f661859d2f.jpg",
+    "local": "/images/collections/blue-lock-cover.webp",
+    "width": 1308,
+    "height": 736,
+    "rotation": 90
+  }
+]

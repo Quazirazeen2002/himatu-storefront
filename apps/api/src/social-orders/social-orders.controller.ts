@@ -10,7 +10,11 @@ import {
   UseGuards,
   BadRequestException,
   ConflictException,
+  ForbiddenException,
+  Res,
 } from "@nestjs/common";
+import type { Response } from "express";
+import { invoicePdf, type InvoiceSnapshot } from "./invoice";
 import { SocialOrdersService } from "./social-orders.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { AuthGuard } from "../auth/auth.guard";
@@ -84,6 +88,17 @@ export class SocialOrdersController {
   invoice(@Param("id") id: string) {
     return this.orders.getInvoice(id);
   }
+  @Get("admin/invoices/:id/pdf")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async pdf(@Param("id") id: string, @Res() response: Response) {
+    const invoice = await this.orders.getInvoice(id);
+    const snapshot = invoice.snapshot as unknown as InvoiceSnapshot;
+    const pdf = await invoicePdf(snapshot);
+    const name = snapshot.number.replace(/[^a-zA-Z0-9_-]/g, "-");
+    response.set({"Content-Type":"application/pdf", "Content-Disposition":`attachment; filename="HIMATU-Invoice-${name}.pdf"`, "Cache-Control":"private, no-store"});
+    response.send(pdf);
+  }
   @Post("admin/invoices/:id/send")
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -117,6 +132,14 @@ export class SocialOrdersController {
       update: { value },
     });
   }
+  @Get("admin/staff/access")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  async staffAccess(@CurrentUser() user: { id: string }) {
+    const owner = await this.prisma.db.siteContent.findUnique({where:{key:"store-owner"}});
+    const ownerId = (owner?.value as {userId?:string} | undefined)?.userId;
+    return { isOwner: ownerId === user.id, ownerId: ownerId || null };
+  }
   @Get("admin/staff")
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
@@ -143,6 +166,10 @@ export class SocialOrdersController {
     if (id === user.id)
       throw new ConflictException("You cannot change your own role");
     return this.prisma.db.$transaction(async tx => {
+      const owner = await tx.siteContent.findUnique({where:{key:"store-owner"}});
+      const ownerId = (owner?.value as {userId?:string} | undefined)?.userId;
+      if (!ownerId || user.id !== ownerId) throw new ForbiddenException("Only the store owner can assign staff roles");
+      if (id === ownerId) throw new ConflictException("The permanent owner account cannot be changed");
       const actor = await tx.userProfile.findUnique({where:{id:user.id}});
       if(actor?.role !== "ADMIN") throw new ConflictException("Your permissions changed. Sign in again.");
       if(body.role !== "ADMIN" && await tx.userProfile.count({where:{role:"ADMIN"}}) < 2) {

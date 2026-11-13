@@ -12,7 +12,6 @@ const groups = [
     links: [
       ["Shop all", "/shop"],
       ["Product Categories", "/categories"],
-      ["New Arrivals", "/shop?new=1&sort=new"],
       ["Collections", "/collections"],
       ["Custom 3D Printing", "/3d-printing"],
       ["About Himatu", "/about"],

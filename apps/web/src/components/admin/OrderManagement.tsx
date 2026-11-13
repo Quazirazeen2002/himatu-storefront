@@ -1,5 +1,5 @@
 "use client";
-import { InvoiceReview } from "./InvoiceReview";
+import Link from "next/link";
 
 import { useEffect, useState, useTransition } from "react";
 import Image from "next/image";
@@ -534,13 +534,13 @@ export function OrderManagement() {
               </div>
 
               {activeOrder.cancelReason && (
-                <div style={{ padding: "12px", background: "var(--admin-accent-soft)", borderRadius: "6px", border: "1px solid var(--admin-accent)", color: "#ef4444", fontSize: "12px" }}>
+                <div style={{ padding: "12px", background: "var(--admin-danger-soft)", borderRadius: "6px", border: "1px solid var(--admin-danger)", color: "var(--admin-danger)", fontSize: "12px" }}>
                   <strong>Order Cancelled:</strong> {activeOrder.cancelReason}
                 </div>
               )}
             </div>
 
-            {session?.user.role === "ADMIN" && session.accessToken && activeOrder && <InvoiceReview key={activeOrder.id} orderId={activeOrder.id} token={session.accessToken}/>}
+            {session?.user.role === "ADMIN" && session.accessToken && activeOrder && <Link className="admin-btn admin-btn--secondary" href={`/admin/invoices/${encodeURIComponent(activeOrder.id)}`}>Review invoice PDF</Link>}
               <div className="admin-modal-footer">
               <button type="button" className="admin-btn admin-btn--secondary" onClick={() => setActiveOrder(null)}>
                 Close

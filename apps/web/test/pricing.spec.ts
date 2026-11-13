@@ -30,8 +30,10 @@ describe("Original prices and genuine discounts", () => {
   it("keeps all seven AI concepts unpriced and paginates the expanded catalogue", () => {
     expect(concepts).toHaveLength(7);
     expect(concepts.every(p => p.price === undefined && p.availability === undefined)).toBe(true);
-    const all = [...products,...concepts];
-    expect(paginate(all,1).items).toHaveLength(9);
-    expect(paginate(all,2).items).toHaveLength(all.length - 9);
+    const all = Array.from({length:36}, (_,index)=>({...products[index % products.length],id:`figure-${index}`}));
+    expect(paginate(all,1)).toMatchObject({page:1,from:1,to:16,total:36,pages:3});
+    expect(paginate(all,2)).toMatchObject({page:2,from:17,to:32,total:36});
+    expect(paginate(all,3)).toMatchObject({page:3,from:33,to:36,total:36});
+    expect(paginate(all,999).items).toHaveLength(4);
   });
 });

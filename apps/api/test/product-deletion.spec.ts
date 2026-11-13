@@ -1,0 +1,21 @@
+import "reflect-metadata";
+import { Test } from "@nestjs/testing";
+import { INestApplication, UnauthorizedException } from "@nestjs/common";
+import request from "supertest";
+import { ProductsController } from "../src/products/products.controller";
+import { ProductsService } from "../src/products/products.service";
+import { PrismaService } from "../src/prisma/prisma.service";
+import { StorageService } from "../src/storage/storage.service";
+import { CategoriesService } from "../src/categories/categories.service";
+import { AuthGuard } from "../src/auth/auth.guard";
+import { RolesGuard } from "../src/auth/roles";
+describe("Permanent product deletion permissions",()=>{
+ let app:INestApplication;
+ const remove=jest.fn().mockResolvedValue({success:true,id:"product"});
+ beforeAll(async()=>{const module=await Test.createTestingModule({controllers:[ProductsController],providers:[RolesGuard,{provide:ProductsService,useValue:{deleteProduct:remove}},{provide:CategoriesService,useValue:{}}]}).overrideGuard(AuthGuard).useValue({canActivate:(context:any)=>{const req=context.switchToHttp().getRequest();if(!req.headers['x-test-role'])throw new UnauthorizedException();req.customer={id:'test-staff',role:req.headers['x-test-role']};return true;}}).compile();app=module.createNestApplication();await app.init();});
+ afterAll(()=>app.close());
+ beforeEach(()=>remove.mockClear());
+ it.each(['ADMIN','MODERATOR'])('lets %s delete active or archived catalogue products',async role=>{const response=await request(app.getHttpServer()).delete('/admin/products/product/permanent').set('x-test-role',role);expect(response.status).toBe(200);expect(remove).toHaveBeenCalledWith('product');});
+ it('blocks customers and unsigned requests',async()=>{expect((await request(app.getHttpServer()).delete('/admin/products/product/permanent').set('x-test-role','CUSTOMER')).status).toBe(403);expect((await request(app.getHttpServer()).delete('/admin/products/product/permanent')).status).toBe(401);expect(remove).not.toHaveBeenCalled();});
+});
+it('returns a readable error for an already-deleted product without changing historical orders',async()=>{const db={product:{delete:jest.fn().mockRejectedValue({code:'P2025'})}};const service=new ProductsService({db} as unknown as PrismaService,{} as StorageService);await expect(service.deleteProduct('missing')).rejects.toThrow('already deleted');});

@@ -7,7 +7,10 @@
   --secondary: #a0a0a0;
   --muted: #737373;
   --border: #262626;
-  --accent: #d92727;
+  --accent: #34d399;
+  --accent-fill: #15803d;
+  --danger: #ff7b7b;
+  --danger-fill: #b42323;
   --button-background: #ffffff;
   --button-text: #000000;
   --button-hover: #ededed;

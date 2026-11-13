@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { authService, type CustomerSession } from "@/lib/auth-service";
 import { InvoiceReview } from "./InvoiceReview";
@@ -121,10 +122,9 @@ export function SocialOrderManagement() {
     <div className="social-admin">
       <div className="admin-page-header">
         <div>
-          <h1>Social order inbox</h1>
+          <h1>Order requests</h1>
           <p>
-            Requests are captured before chat opens. Confirm the chat, prices
-            and delivery details before enrolling an order.
+            Review website and social requests, confirm prices and arrange delivery.
           </p>
         </div>
         <button
@@ -192,6 +192,7 @@ export function SocialOrderManagement() {
                                 slug: chosen.slug,
                                 name: chosen.name,
                                 unitPrice: chosen.salePrice || chosen.price,
+                                originalUnitPrice: chosen.price,
                               }
                             : { ...x, productId: null }
                           : x,
@@ -291,6 +292,7 @@ export function SocialOrderManagement() {
             Add item
           </button>
           <div className="staff-form-grid">
+            <div className="admin-order-savings"><strong>Product savings</strong><span>BDT {draft.items.reduce((sum,item) => sum + Math.max(0, (item.originalUnitPrice ?? item.unitPrice) - item.unitPrice) * item.quantity, 0).toLocaleString()}</span></div>
             {(["shippingCharge", "discountAmount"] as const).map((key) => (
               <label className="field" key={key}>
                 <span>
@@ -414,22 +416,12 @@ export function SocialOrderManagement() {
               </span>
             )}
             {r.orderId && session?.user.role === "ADMIN" && (
-              <button
-                className="admin-btn admin-btn--secondary"
-                onClick={() => {
-                  setConfirmed({
-                    id: r.orderId!,
-                    orderNumber: r.order!.orderNumber,
-                  });
-                }}
-              >
-                Review invoice
-              </button>
+              <Link className="admin-btn admin-btn--secondary" href={`/admin/invoices/${encodeURIComponent(r.orderId!)}`}>Review invoice</Link>
             )}
           </div>
         </article>
       ))}
-      {!rows.length && <p>No social requests yet.</p>}
+      {!rows.length && <p>No order requests yet.</p>}
       <div className="staff-actions">
         <button
           className="admin-btn admin-btn--secondary"

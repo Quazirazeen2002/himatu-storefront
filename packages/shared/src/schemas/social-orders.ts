@@ -5,6 +5,7 @@ export const SocialChannelSchema = z.enum([
   "facebook",
   "tiktok",
   "manual",
+  "website",
 ]);
 export const SocialCustomerSchema = z.object({
   fullName: z.string().trim().min(1).max(120),
@@ -21,6 +22,7 @@ export const SocialItemSchema = z.object({
   slug: z.string().max(220),
   name: z.string().min(1).max(200),
   quantity: z.number().int().min(1).max(50),
+  originalUnitPrice: z.number().int().min(0).max(100000000).optional(),
   unitPrice: z.number().int().min(0).max(100000000),
 });
 export const SocialRequestSchema = z.object({

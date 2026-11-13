@@ -93,7 +93,7 @@ export const assets = {
   editorial: [figurePhotos["zoro-asura"], figurePhotos["straw-hat-captain"]],
   collection: (c: Collection): ImageAsset => ({
     id: c.slug, src: c.imageUrl || "/images/categories/category-default.svg",
-    alt: c.imageIsDemo ? `${c.name} illustrated category cover; not a photograph of actual inventory` : `${c.name} collection product photograph`,
+    alt: c.imageIsDemo ? `${c.name} illustrated category cover; not a photograph of actual inventory` : `${c.name} collection cover`,
     width: 1200, height: 1500, placeholder: false, fit: "cover",
   }),
   product: (p: Product): ImageAsset =>

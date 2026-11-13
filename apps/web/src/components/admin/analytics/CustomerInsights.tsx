@@ -107,7 +107,7 @@ export function CustomerInsights({ data, currency = "৳" }: CustomerInsightsPro
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-900 flex items-center gap-1.5">
-                <MapPin size={14} className="text-red-600" />
+                <MapPin size={14} className="text-emerald-700" />
                 <span>Geographic Sales Distribution (Bangladesh Districts)</span>
               </h3>
               <p className="text-[11px] text-neutral-500">

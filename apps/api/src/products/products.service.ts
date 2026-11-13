@@ -438,6 +438,19 @@ export class ProductsService {
     return this.mapProductToDto(updated);
   }
 
+  async deleteProduct(id: string) {
+    try {
+      // FK cascades remove catalogue images, inventory, bags and wishlist entries.
+      // OrderItem.productId becomes null; historical names, images and prices remain.
+      await this.prisma.db.product.delete({ where: { id } });
+      return { success: true, id };
+    } catch (error) {
+      if (error && typeof error === "object" && "code" in error && error.code === "P2025")
+        throw new NotFoundException("Product not found or already deleted");
+      throw error;
+    }
+  }
+
   async adjustInventory(
     productId: string,
     quantity: number,

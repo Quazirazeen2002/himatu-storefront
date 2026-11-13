@@ -122,6 +122,13 @@ export class ProductsController {
     return this.productsService.archiveProduct(id);
   }
 
+  @Delete("admin/products/:id/permanent")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("ADMIN", "MODERATOR")
+  async deleteProduct(@Param("id") id: string) {
+    return this.productsService.deleteProduct(id);
+  }
+
   @Post("admin/inventory/:productId/adjust")
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN", "MODERATOR")

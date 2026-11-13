@@ -1,5 +1,4 @@
 import { products } from "./config";
-import { referenceProducts } from "./reference-products";
 import type { ConceptProduct, Product } from "./types";
 export const CONCEPT_LABEL = "AI-GENERATED CONCEPT — NOT FOR SALE";
 export const concepts: ConceptProduct[] = [
@@ -51,4 +50,4 @@ export const concepts: ConceptProduct[] = [
   isNew: false,
   addedAt: -index,
 }));
-export const catalogue: Product[] = [...products, ...referenceProducts];
+export const catalogue: Product[] = [...products];

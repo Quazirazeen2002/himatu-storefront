@@ -1,30 +1,19 @@
 "use client";
-import {
-  registerSocialOrder,
-  channelLink,
-  socialOrderChannels,
-  type SocialOrderChannel,
-} from "@/lib/social-orders";
-import { VideoSocialLinks } from "../layout/VideoSocialLinks";
-import { pricing } from "@/lib/pricing";
+import { registerSocialOrder, channelLink, socialOrderChannels, type SocialOrderChannel } from "@/lib/social-orders";
 import { formatWhatsAppOrder } from "@/lib/whatsapp";
+import { pricing } from "@/lib/pricing";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  ShieldCheck,
-  Truck,
-  Lock,
+  ArrowUpRight,
   CheckCircle2,
   Package,
   LoaderCircle,
-  Sparkles,
-  MessageCircle,
-  Instagram,
-  ArrowUpRight,
-  Copy,
   AlertCircle,
+  MessageCircle,
+  Copy,
 } from "lucide-react";
 import { useStore } from "./StoreProvider";
 import { formatPrice } from "@/lib/config";
@@ -78,17 +67,9 @@ export function CheckoutForm() {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [promoCode, setPromoCode] = useState("");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [, setFreeShippingPromo] = useState(false);
-  const [promoMessage, setPromoMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [orderChannel, setOrderChannel] =
-    useState<SocialOrderChannel>("whatsapp");
-  const [socialDraft, setSocialDraft] = useState<{
-    channel: SocialOrderChannel;
-    message: string;
-  } | null>(null);
+  const [orderChannel, setOrderChannel] = useState<SocialOrderChannel>("whatsapp");
+  const [confirmation, setConfirmation] = useState<{id:string;channel:SocialOrderChannel;message:string}|null>(null);
   const [copied, setCopied] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -153,12 +134,12 @@ export function CheckoutForm() {
     0,
   );
 
-  const shippingPrice = 0;
-  const discountAmount = Math.round((subtotal * discountPercent) / 100);
-  const grandTotal = Math.max(0, subtotal - discountAmount + shippingPrice);
+  const originalSubtotal = cartItems.reduce((sum, { product, quantity }) => sum + pricing(product).original * quantity, 0);
+  const productSavings = originalSubtotal - subtotal;
+  const grandTotal = subtotal;
 
   const handleChange = (key: keyof typeof values, val: string | boolean) => {
-    setSocialDraft(null);
+    setConfirmation(null);
     setValues((prev) => {
       const next = { ...prev, [key]: val };
       return next;
@@ -169,7 +150,7 @@ export function CheckoutForm() {
   };
 
   const handleSelectSavedAddress = (addr: AddressDto) => {
-    setSocialDraft(null);
+    setConfirmation(null);
     setSelectedAddressId(addr.id);
     setValues((prev) => ({
       ...prev,
@@ -180,26 +161,6 @@ export function CheckoutForm() {
       address: addr.fullAddress,
       postalCode: addr.postalCode || "",
     }));
-  };
-
-  const handleApplyPromo = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSocialDraft(null);
-    const clean = promoCode.trim().toUpperCase();
-    setFreeShippingPromo(clean === "FREESHIP");
-    if (clean === "HIMATU10" || clean === "BANKAI" || clean === "ANIME") {
-      setDiscountPercent(10);
-      setPromoMessage("Promo code applied: 10% collector discount active!");
-    } else if (clean === "FREESHIP") {
-      setDiscountPercent(0);
-      setPromoMessage("Free shipping promo applied!");
-    } else if (!clean) {
-      setPromoMessage("");
-      setDiscountPercent(0);
-    } else {
-      setPromoMessage("Invalid code. Try HIMATU10 for 10% off your order.");
-      setDiscountPercent(0);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -265,41 +226,27 @@ export function CheckoutForm() {
           name: product.name,
           quantity,
           unitPrice: pricing(product).current,
+          originalUnitPrice: pricing(product).original,
         })),
       });
-      const message =
-        `Request reference: ${request.id}\n` +
-        formatWhatsAppOrder({
-          customer: values,
-          items: cartItems.map(({ product, quantity }) => ({
-            name: product.name,
-            character: product.character,
-            quantity,
-            unitPrice: pricing(product).current,
-            slug: product.id,
-          })),
-          subtotal,
-          discount: discountAmount,
-          shipping: 0,
-          shippingPending: true,
-          total: Math.max(0, subtotal - discountAmount),
-          origin: window.location.origin,
-        });
-      setSocialDraft({ channel: orderChannel, message });
+      const message = `Request reference: ${request.id}\n` + formatWhatsAppOrder({
+        customer: values,
+        items: cartItems.map(({product,quantity}) => ({name:product.name,character:product.character,quantity,unitPrice:pricing(product).current,slug:product.id})),
+        subtotal:originalSubtotal,discount:productSavings,discountLabel:"Product discount",shipping:0,shippingPending:true,total:grandTotal,origin:window.location.origin,
+      });
+      setConfirmation({id:request.id,channel:orderChannel,message});
       setCopied(false);
+      // Only hand off customer details once the request has been saved.
+      try { if (chat && !chat.closed) chat.location.href = channelLink(orderChannel, message); } catch { /* The saved request can be reopened below if the window was closed. */ }
       if (orderChannel !== "whatsapp") {
-        try {
-          await navigator.clipboard.writeText(message);
-          setCopied(true);
-        } catch {}
+        try { await navigator.clipboard.writeText(message); setCopied(true); } catch { /* A visible copy fallback remains available. */ }
       }
-      if (chat) chat.location.href = channelLink(orderChannel, message);
     } catch (error) {
       chat?.close();
       setServerError(
         error instanceof Error
           ? error.message
-          : "Your order could not be registered. Please try again. Chat has not been opened.",
+          : "Your order could not be placed. Please try again.",
       );
     } finally {
       setSubmitting(false);
@@ -335,22 +282,6 @@ export function CheckoutForm() {
         className="onepage-checkout-main"
         onSubmit={handleSubmit}
       >
-        {/* Security & Reassurance Header Banner */}
-        <div className="checkout-reassurance-strip">
-          <div className="reassurance-item">
-            <Lock size={15} />
-            <span>Review your order details</span>
-          </div>
-          <div className="reassurance-item">
-            <ShieldCheck size={15} />
-            <span>Confirm edition and availability</span>
-          </div>
-          <div className="reassurance-item">
-            <Truck size={15} />
-            <span>Delivery arranged with HIMATU</span>
-          </div>
-        </div>
-
         {/* SECTION 1: Customer Contact Information */}
         <section className="checkout-card" aria-labelledby="contact-heading">
           <div className="checkout-card-header">
@@ -555,113 +486,33 @@ export function CheckoutForm() {
           </div>
         </section>
 
-        <section
-          className="checkout-card checkout-channel"
-          aria-labelledby="order-channel-heading"
-        >
+        <section className="checkout-card checkout-channel" aria-labelledby="order-channel-heading">
           <h2 id="order-channel-heading">HOW WOULD YOU LIKE TO ORDER?</h2>
-          {socialOrderChannels.map((channel) => (
-            <label
-              key={channel.id}
-              className={`option-card ${orderChannel === channel.id ? "selected" : ""}`}
-            >
-              <input
-                type="radio"
-                name="orderChannel"
-                disabled={submitting}
-                checked={orderChannel === channel.id}
-                onChange={() => {
-                  setOrderChannel(channel.id);
-                  setSocialDraft(null);
-                }}
-              />
-              <MessageCircle size={20} />
-              <span>
-                <strong>{channel.name} order</strong>
-                <small>
-                  {channel.id === "whatsapp"
-                    ? "Open WhatsApp with your order message ready to send."
-                    : `Open ${channel.name} automatically. Your order details are copied for you to paste and send.`}
-                </small>
-              </span>
-            </label>
-          ))}
-        </section>
-        <section
-          className="checkout-card"
-          aria-labelledby="checkout-social-heading"
-        >
-          <h2 id="checkout-social-heading">FOLLOW THE COLLECTION.</h2>
-          <div className="footer-socials checkout-video-socials">
-            <VideoSocialLinks />
+          <div className="checkout-channel-options">
+            {socialOrderChannels.map(channel => <label key={channel.id} className={`option-card ${orderChannel === channel.id ? "selected" : ""}`}>
+              <input type="radio" name="orderChannel" value={channel.id} checked={orderChannel === channel.id} disabled={submitting} onChange={() => {setOrderChannel(channel.id);setConfirmation(null);setServerError(null);}} />
+              <span><strong>{channel.name}</strong><small>{channel.id === "whatsapp" ? "Open with your order message ready to send." : channel.id === "tiktok" ? "Open HIMATU’s profile, tap Message, then paste your order details." : "Open the conversation, then paste your copied order details."}</small></span>
+            </label>)}
           </div>
         </section>
-        {socialDraft && (
-          <section
-            className="checkout-card whatsapp-draft"
-            aria-label={`${socialDraft.channel} order message`}
-            role="status"
-          >
-            <h2>ORDER REQUEST RECEIVED.</h2>
-            <p>
-              Your order request has been received.{" "}
-              {socialDraft.channel === "whatsapp"
-                ? "Your message is ready in WhatsApp. Tap Send to continue with HIMATU."
-                : copied
-                  ? `Your details have been copied. Paste them into your ${socialDraft.channel} conversation and tap Send.`
-                  : `Open ${socialDraft.channel}, then copy and paste the order details below to continue with HIMATU.`}
-            </p>
-            <details>
-              <summary>Order message and contact link</summary>
-              <textarea
-                className="social-order-message"
-                aria-label="Complete order message"
-                readOnly
-                value={socialDraft.message}
-                rows={12}
-                onFocus={(event) => event.currentTarget.select()}
-              />
-              <div className="social-draft-actions">
-                <button
-                  type="button"
-                  className="button button--primary"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(socialDraft.message);
-                      setCopied(true);
-                    } catch {
-                      setCopied(false);
-                      setServerError(
-                        "Select and copy the order message above, then paste it into the chat.",
-                      );
-                    }
-                  }}
-                >
-                  <Copy size={15} />
-                  {copied ? "DETAILS COPIED" : "COPY DETAILS"}
-                </button>
-                <a
-                  className="button button--outline"
-                  href={channelLink(socialDraft.channel, socialDraft.message)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  {socialDraft.channel === "instagram" ? (
-                    <Instagram size={16} />
-                  ) : (
-                    <MessageCircle size={16} />
-                  )}{" "}
-                  OPEN {socialDraft.channel.toUpperCase()}
-                </a>
-              </div>
-            </details>
+        {confirmation && (
+          <section className="checkout-card order-confirmation" role="status" tabIndex={-1}>
+            <CheckCircle2 size={32} aria-hidden="true" />
+            <h2>YOUR ORDER REQUEST IS RECEIVED.</h2>
+            <p>{confirmation.channel === "whatsapp" ? "Your message is ready in WhatsApp. Tap Send to continue with HIMATU." : copied ? confirmation.channel === "tiktok" ? "Your details are copied. Tap Message on HIMATU’s TikTok profile, then paste and send your order." : `Your details are copied. Paste them into your ${socialOrderChannels.find(channel => channel.id === confirmation.channel)?.name} conversation and tap Send.` : "Copy your order details below and paste them into the conversation to continue with HIMATU."}</p>
+            <p className="order-reference">Reference: {confirmation.id}</p>
+            <div className="social-draft-actions">
+              <a className="button button--outline" href={channelLink(confirmation.channel,confirmation.message)} target="_blank" rel="noopener noreferrer"><MessageCircle size={16}/>OPEN {confirmation.channel.toUpperCase()}</a>
+              <button type="button" className="button button--outline" onClick={async()=>{try{await navigator.clipboard.writeText(confirmation.message);setCopied(true);}catch{setCopied(false);}}}><Copy size={16}/>{copied?"DETAILS COPIED":"COPY ORDER DETAILS"}</button>
+            </div>
+            <details><summary>View order message</summary><textarea className="social-order-message" aria-label="Complete order message" rows={12} readOnly value={confirmation.message} onFocus={event=>event.currentTarget.select()}/></details>
           </section>
         )}
         {/* Submit Action */}
         <div className="checkout-submit-block">
           <Button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !!confirmation}
             className="button button-primary button-lg checkout-btn"
           >
             {submitting ? (
@@ -671,15 +522,7 @@ export function CheckoutForm() {
               </>
             ) : (
               <>
-                {orderChannel === "instagram" ? (
-                  <Instagram size={19} />
-                ) : (
-                  <MessageCircle size={19} />
-                )}
-                <span>
-                  {`ORDER VIA ${orderChannel.toUpperCase()}`} · ৳
-                  {grandTotal.toLocaleString()} BDT
-                </span>
+                <span>{confirmation ? "ORDER RECEIVED" : `ORDER VIA ${orderChannel.toUpperCase()}`} · ৳{grandTotal.toLocaleString()} BDT</span>
               </>
             )}
           </Button>
@@ -716,60 +559,33 @@ export function CheckoutForm() {
             ))}
           </div>
 
-          {/* Promo Code Input */}
-          <form onSubmit={handleApplyPromo} className="promo-input-row">
-            <input
-              type="text"
-              placeholder="Promo code"
-              value={promoCode}
-              onChange={(e) => setPromoCode(e.target.value)}
-              className="promo-input"
-              disabled={submitting}
-            />
-            <button type="submit" className="promo-button">
-              APPLY
-            </button>
-          </form>
-
-          {promoMessage && (
-            <p
-              className={`promo-message ${
-                discountPercent > 0 || promoCode.toUpperCase() === "FREESHIP"
-                  ? "success"
-                  : "error"
-              }`}
-            >
-              {promoMessage}
-            </p>
-          )}
-
           <div className="summary-divider" />
 
           {/* Financial Breakdown */}
           <div className="summary-totals-list">
             <div className="summary-line">
               <span>Subtotal</span>
-              <span>{formatPrice(subtotal)}</span>
+              <span>{formatPrice(originalSubtotal)}</span>
             </div>
 
-            {discountPercent > 0 && (
+            {productSavings > 0 && (
               <div className="summary-line discount-line">
                 <span className="discount-label">
-                  <Sparkles size={13} /> Collector Discount ({discountPercent}%)
+                  Product discount
                 </span>
-                <span>-{formatPrice(discountAmount)}</span>
+                <span>-{formatPrice(productSavings)}</span>
               </div>
             )}
 
             <div className="summary-line">
               <span>Delivery</span>
-              <span>Arranged in chat</span>
+              <span>Confirmed before dispatch</span>
             </div>
 
             <div className="summary-divider" />
 
             <div className="summary-line grand-total-line">
-              <span>Items estimate</span>
+              <span>Total</span>
               <div className="grand-total-stack">
                 <span className="grand-total-amount">
                   ৳{grandTotal.toLocaleString()}
@@ -779,17 +595,6 @@ export function CheckoutForm() {
             </div>
           </div>
 
-          {/* Guarantee Badges */}
-          <div className="summary-guarantees">
-            <div className="guarantee-row">
-              <ShieldCheck size={16} />
-              <span>Confirm packaging and edition with HIMATU</span>
-            </div>
-            <div className="guarantee-row">
-              <Truck size={16} />
-              <span>Delivery details confirmed before dispatch</span>
-            </div>
-          </div>
         </div>
       </aside>
     </div>

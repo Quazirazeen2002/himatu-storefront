@@ -19,7 +19,6 @@ import {
   registerStoreProducts,
   type DemoState,
 } from "@/lib/demo-store";
-import { catalogue } from "@/lib/catalogue";
 import { fallbackCategories } from "@/lib/taxonomy";
 import type { CategoryDto } from "@himatu/shared";
 import { getCategories, getAllProducts } from "@/lib/commerce-api";
@@ -27,6 +26,7 @@ import { mergeStorefrontProducts } from "@/lib/storefront-products";
 import type { Product, FigureProduct, ReferenceProduct } from "@/lib/types";
 
 interface Store extends DemoState {
+  catalogueStatus: "loading" | "ready" | "error";
   categoryRegistry: CategoryDto[];
   pricedProducts: FigureProduct[];
   bagProducts: (FigureProduct | ReferenceProduct)[];
@@ -51,7 +51,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     refresh(); window.addEventListener("focus", refresh);
     return () => { active = false; window.removeEventListener("focus", refresh); };
   }, []);
-  const [pricedCatalogue, setCatalogue] = useState<Product[]>(catalogue);
+  const [catalogueStatus, setCatalogueStatus] = useState<Store["catalogueStatus"]>("loading");
+  const [pricedCatalogue, setCatalogue] = useState<Product[]>([]);
   useEffect(() => {
     let active = true;
     const refresh = () => getAllProducts().then(items => {
@@ -59,7 +60,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       const next = mergeStorefrontProducts(items);
       registerStoreProducts(next);
       setCatalogue(next);
-    }).catch(() => { /* Keep the last usable catalogue during connection failures. */ });
+      setCatalogueStatus("ready");
+    }).catch(() => { if (active) setCatalogueStatus(status => status === "ready" ? status : "error"); });
     refresh();
     window.addEventListener("focus", refresh);
     window.addEventListener("himatu:catalogue-updated", refresh);
@@ -76,6 +78,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     <StoreContext.Provider
       value={{
         ...state,
+        catalogueStatus,
         pricedProducts,
         bagProducts,
         categoryRegistry,

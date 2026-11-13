@@ -536,7 +536,7 @@
   transform: scaleX(1);
 }
 .nav-item > a[aria-current]:after {
-  background: var(--accent);
+  background: var(--accent-fill);
 }
 @media (prefers-reduced-motion: reduce) {
   .nav-item > a:after {
@@ -756,7 +756,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-fill);
   border: 1.5px solid var(--background);
 }
 
@@ -2363,7 +2363,7 @@
 }
 
 .admin-toast.error {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 
@@ -3555,7 +3555,7 @@
 }
 
 .catalog-full-layout .product-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 36px 24px;
 }
 

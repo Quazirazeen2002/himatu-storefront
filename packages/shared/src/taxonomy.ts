@@ -26,6 +26,6 @@ const rows: Array<[string, string, string, CategoryDto["kind"], CategoryDto["fam
 ];
 export const storefrontTaxonomy: CategoryTemplate[] = rows.map(([name, slug, description, kind, family], index) => ({
   name, slug, description, kind, family, isActive: true, displayOrder: index,
-  imageUrl: slug === "one-piece" ? "/images/figures/867155812_122155861425356138_1955209043147405711_n.jpg" : slug === "other-collections" ? "/images/concepts/celestial-wayfarer.webp" : cover(slug),
+  imageUrl: ["naruto", "attack-on-titan", "demon-slayer", "one-piece", "katanas", "keychains", "jujutsu-kaisen", "dragon-ball", "blue-lock"].includes(slug) ? `/images/collections/${slug}-cover.webp` : slug === "one-piece" ? "/images/figures/867155812_122155861425356138_1955209043147405711_n.jpg" : slug === "other-collections" ? "/images/concepts/celestial-wayfarer.webp" : cover(slug),
   imageIsDemo: slug === "other-collections",
 }));

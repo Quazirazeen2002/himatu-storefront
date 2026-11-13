@@ -15,7 +15,8 @@ import type {
 } from "@himatu/shared";
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
-import { invoiceHtml, type InvoiceSnapshot } from "./invoice";
+import { invoiceLogo } from "./invoice-logo";
+import { invoiceHtml, invoicePdf, type InvoiceSnapshot } from "./invoice";
 
 @Injectable()
 export class SocialOrdersService {
@@ -323,7 +324,11 @@ export class SocialOrdersService {
         from: { name: "HIMATU", address: from },
         to: snapshot.customer.email,
         subject: `HIMATU invoice · ${snapshot.number}`,
-        html: invoiceHtml(snapshot),
+        html: invoiceHtml(snapshot).replace(`data:image/png;base64,${invoiceLogo}`, "cid:himatu-logo"),
+        attachments: [
+          {filename:"himatu-logo.png",content:Buffer.from(invoiceLogo,"base64"),cid:"himatu-logo"},
+          {filename:`HIMATU-Invoice-${snapshot.number.replace(/[^a-zA-Z0-9_-]/g,"-")}.pdf`,content:await invoicePdf(snapshot),contentType:"application/pdf"},
+        ],
         text: `HIMATU Invoice ${snapshot.number}\nTotal: BDT ${snapshot.totalAmount}\nContact 01714546809 for order support.`,
       });
       if (!sent.accepted?.length)

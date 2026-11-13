@@ -9,7 +9,7 @@ export default function Checkout() {
       <div className="page-intro checkout-page-intro">
         <p className="eyebrow">YOUR NEXT COLLECTIBLE STARTS HERE</p>
         <h1>CHECKOUT.</h1>
-        <p>Review your items and delivery details, then choose a channel to continue your order with HIMATU.</p>
+        <p>Review your items and delivery details, then place your order.</p>
       </div>
       <CheckoutForm />
     </Container>

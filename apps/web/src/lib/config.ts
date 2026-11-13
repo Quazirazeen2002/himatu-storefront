@@ -5,8 +5,8 @@ export const navigation = [
   { label: "Shop All", href: "/shop" },
   { label: "Categories", href: "/categories" },
   { label: "Collections", href: "/collections" },
-  { label: "New Arrivals", href: "/shop?new=1&sort=new" },
   { label: "3D Printing", href: "/3d-printing" },
+  { label: "About", href: "/about" },
 ];
 export const collections: Collection[] = fallbackCategories.filter(category => categoryKind(category) === "FRANCHISE").map(asCollection);
 // Original prices are preserved. Owner approved a 15% introductory discount on 9 November 2026.

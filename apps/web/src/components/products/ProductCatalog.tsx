@@ -19,7 +19,7 @@ import {
   type Filters,
 } from "@/lib/discovery";
 import { ProductGrid } from "./ProductCard";
-import { Button, DemoNotice } from "../ui/Primitives";
+import { Button } from "../ui/Primitives";
 import { useStore } from "../commerce/StoreProvider";
 
 const sortOptions = [
@@ -147,7 +147,7 @@ function CatalogContent({
   const paging = paginate(items, Number(params.get("page") || 1));
 
   useEffect(() => {
-    if (params.has("page") && params.get("page") !== String(paging.page)) {
+    if (store.catalogueStatus === "ready" && params.has("page") && params.get("page") !== String(paging.page)) {
       const next = new URLSearchParams(params.toString());
       if (paging.page === 1) next.delete("page");
       else next.set("page", String(paging.page));
@@ -157,7 +157,7 @@ function CatalogContent({
         pathname + (next.size ? "?" + next.toString() : ""),
       );
     }
-  }, [params, pathname, paging.page]);
+  }, [params, pathname, paging.page, store.catalogueStatus]);
 
   const go = (page: number) => {
     const next = new URLSearchParams(params.toString());
@@ -285,6 +285,9 @@ function CatalogContent({
     !!filters.minimum &&
     !!filters.maximum &&
     Number(filters.minimum) > Number(filters.maximum);
+
+  if (store.catalogueStatus === "loading") return <p role="status" className="catalog-loading">Loading the collection…</p>;
+  if (store.catalogueStatus === "error") return <div className="empty-state" role="alert"><h2>The collection could not be loaded.</h2><p>Please try again in a moment.</p><Button variant="outline" onClick={() => window.location.reload()}>TRY AGAIN</Button></div>;
 
   return (
     <div className="catalog-experience">
@@ -834,9 +837,7 @@ function CatalogContent({
           </nav>
         )}
 
-        <DemoNotice>
-          Explore the collection. Ask HIMATU about available editions and stock.
-        </DemoNotice>
+
       </div>
     </div>
   );
