@@ -21,6 +21,7 @@ describe("Route protection and redirect contracts", () => {
       expect(isPublicRoute("/api/auth/register")).toBe(true);
       expect(isPublicRoute("/_next/static/chunks/main.js")).toBe(true);
       expect(isPublicRoute("/images/figures/sample.jpg")).toBe(true);
+      expect(isPublicRoute("/videos/hero-anime.mp4")).toBe(true);
       expect(isPublicRoute("/fonts/inter.woff2")).toBe(true);
       expect(isPublicRoute("/favicon.ico")).toBe(true);
       expect(isPublicRoute("/icon.svg")).toBe(true);

@@ -22,6 +22,7 @@ const PUBLIC_PREFIXES = [
   "/api/auth/",
   "/_next/",
   "/images/",
+  "/videos/",
   "/art/",
   "/fonts/",
 ];

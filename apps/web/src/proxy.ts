@@ -25,6 +25,7 @@ export async function proxy(request: NextRequest) {
   if (
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/images/") ||
+    pathname.startsWith("/videos/") ||
     pathname.startsWith("/art/") ||
     pathname.startsWith("/fonts/") ||
     pathname.startsWith("/api/") ||
@@ -144,7 +145,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api|_next/static|_next/image|images/|art/|fonts/|favicon\\.ico|icon\\.svg|icon\\.png|robots\\.txt|sitemap\\.xml).*)",
+    "/((?!api|_next/static|_next/image|images/|videos/|art/|fonts/|favicon\\.ico|icon\\.svg|icon\\.png|robots\\.txt|sitemap\\.xml).*)",
   ],
 };
 
