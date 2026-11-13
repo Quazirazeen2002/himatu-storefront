@@ -31,6 +31,56 @@ export function Header() {
   const { query, setQuery } = store;
   const count = Object.values(store.bag).reduce((a, b) => a + b, 0);
   const [session, setSession] = useState<CustomerSession | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const closeDropdown = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    setOpenDropdown(null);
+    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
+  const handleMouseEnter = (label: string) => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    if (["Collections", "Categories"].includes(label)) {
+      setOpenDropdown(label);
+    } else {
+      setOpenDropdown(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+    closeTimerRef.current = setTimeout(() => {
+      setOpenDropdown(null);
+    }, 150);
+  };
+
+  // Close dropdown whenever pathname changes
+  useEffect(() => {
+    closeDropdown();
+  }, [pathname]);
+
+  // Close dropdown on click outside or escape key
+  useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".desktop-nav")) {
+        closeDropdown();
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeDropdown();
+    };
+    document.addEventListener("click", handleDocumentClick);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("click", handleDocumentClick);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
 
   useEffect(() => {
     authService
@@ -77,27 +127,121 @@ export function Header() {
           <BrandLogo />
         </Link>
         <nav className="desktop-nav" aria-label="Main navigation">
-          {navigation.map((item) => (
-            <div className="nav-item" key={item.href}>
-              <Link
-                href={item.href}
-                aria-current={pathname === item.href ? "page" : undefined}
+          {navigation.map((item) => {
+            const hasDropdown = ["Collections", "Categories"].includes(item.label);
+            const isOpen = openDropdown === item.label;
+
+            return (
+              <div
+                className={`nav-item ${isOpen ? "is-open" : ""}`}
+                key={item.href}
+                onMouseEnter={() => handleMouseEnter(item.label)}
+                onMouseLeave={handleMouseLeave}
               >
-                {item.label}
-                {["Collections", "Categories"].includes(item.label) && <ChevronDown size={12} />}
-              </Link>
-              {["Collections", "Categories"].includes(item.label) && (
-                <div className="nav-dropdown">
-                  {store.categoryRegistry.filter(c => categoryKind(c) === (item.label === "Categories" ? "PRODUCT_TYPE" : "FRANCHISE")).map((c) => (
-                    <Link href={`/${item.label === "Categories" ? "categories" : "collections"}/${c.slug}`} key={c.slug}>
-                      {c.name}
-                      <ArrowUpRight size={14} />
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+                <Link
+                  href={item.href}
+                  aria-current={pathname === item.href ? "page" : undefined}
+                  aria-expanded={hasDropdown ? isOpen : undefined}
+                  onClick={closeDropdown}
+                >
+                  {item.label}
+                  {hasDropdown && (
+                    <ChevronDown
+                      size={12}
+                      style={{
+                        transition: "transform 0.2s ease",
+                        transform: isOpen ? "rotate(180deg)" : "rotate(0deg)",
+                      }}
+                    />
+                  )}
+                </Link>
+                {item.label === "Categories" && (
+                  <div
+                    className={`nav-dropdown nav-dropdown--mega ${isOpen ? "is-open" : ""}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest("a")) {
+                        closeDropdown();
+                      }
+                    }}
+                  >
+                    <div className="nav-mega-column">
+                      <h3>Featured</h3>
+                      <Link href="/shop?new=1&sort=new" onClick={closeDropdown}>New Arrivals <ArrowUpRight size={14} /></Link>
+                      <Link href="/shop" onClick={closeDropdown}>Shop All <ArrowUpRight size={14} /></Link>
+                      <Link href="/collections" onClick={closeDropdown}>All Collections <ArrowUpRight size={14} /></Link>
+                    </div>
+                    <div className="nav-mega-column">
+                      <h3>Shop by type</h3>
+                      {store.categoryRegistry.filter(c => categoryKind(c) === "PRODUCT_TYPE").map(c => (
+                        <Link href={`/categories/${c.slug}`} key={c.slug} onClick={closeDropdown}>
+                          {c.name}<ArrowUpRight size={14} />
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="nav-mega-column">
+                      <h3>Anime worlds</h3>
+                      {store.categoryRegistry.filter(c => categoryKind(c) === "FRANCHISE" && c.family === "ANIME").slice(0, 6).map(c => (
+                        <Link href={`/collections/${c.slug}`} key={c.slug} onClick={closeDropdown}>
+                          {c.name}<ArrowUpRight size={14} />
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="nav-mega-column">
+                      <h3>More to explore</h3>
+                      {store.categoryRegistry.filter(c => categoryKind(c) === "FRANCHISE" && c.family !== "ANIME").slice(0, 5).map(c => (
+                        <Link href={`/collections/${c.slug}`} key={c.slug} onClick={closeDropdown}>
+                          {c.name}<ArrowUpRight size={14} />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {item.label === "Collections" && (
+                  <div
+                    className={`nav-dropdown nav-dropdown--mega ${isOpen ? "is-open" : ""}`}
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest("a")) {
+                        closeDropdown();
+                      }
+                    }}
+                  >
+                    <div className="nav-mega-column">
+                      <h3>Explore collections</h3>
+                      <Link href="/collections?family=ALL" onClick={closeDropdown}>All worlds <ArrowUpRight size={14} /></Link>
+                      <Link href="/collections?family=ANIME" onClick={closeDropdown}>Anime <ArrowUpRight size={14} /></Link>
+                      <Link href="/collections?family=MARVEL" onClick={closeDropdown}>Marvel <ArrowUpRight size={14} /></Link>
+                      <Link href="/collections?family=DC" onClick={closeDropdown}>DC <ArrowUpRight size={14} /></Link>
+                      <Link href="/collections?family=MOVIES" onClick={closeDropdown}>Movies <ArrowUpRight size={14} /></Link>
+                    </div>
+                    <div className="nav-mega-column">
+                      <h3>Anime favourites</h3>
+                      {store.categoryRegistry.filter(c => categoryKind(c) === "FRANCHISE" && c.family === "ANIME").slice(0, 5).map(c => (
+                        <Link href={`/collections/${c.slug}`} key={c.slug} onClick={closeDropdown}>
+                          {c.name}<ArrowUpRight size={14} />
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="nav-mega-column">
+                      <h3>More anime</h3>
+                      {store.categoryRegistry.filter(c => categoryKind(c) === "FRANCHISE" && c.family === "ANIME").slice(5).map(c => (
+                        <Link href={`/collections/${c.slug}`} key={c.slug} onClick={closeDropdown}>
+                          {c.name}<ArrowUpRight size={14} />
+                        </Link>
+                      ))}
+                    </div>
+                    <div className="nav-mega-column">
+                      <h3>Beyond anime</h3>
+                      {store.categoryRegistry.filter(c => categoryKind(c) === "FRANCHISE" && c.family !== "ANIME").map(c => (
+                        <Link href={`/collections/${c.slug}`} key={c.slug} onClick={closeDropdown}>
+                          {c.name}<ArrowUpRight size={14} />
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
           {session?.user?.role === "ADMIN" && (
             <div className="nav-item">
               <Link
@@ -191,9 +335,8 @@ export function Header() {
           {store.drawer === "menu" && (
             <nav className="mobile-nav" aria-label="Mobile navigation">
               {[
-                ...navigation,
+                ...navigation.flatMap(item => item.label === "Categories" ? [item, { label: "New Arrivals", href: "/shop?new=1&sort=new" }] : [item]),
                 { label: "Wishlist", href: "/wishlist" },
-                { label: "About Himatu", href: "/about" },
               ].map((item) => (
                 <Link
                   onClick={() => store.setDrawer(null)}

@@ -24,14 +24,18 @@
 .taxonomy-hero h1 { font: italic 800 clamp(44px,5.6vw,88px)/.98 var(--font-editorial); margin: 20px 0; overflow-wrap: anywhere; }
 .taxonomy-hero p:not(.eyebrow) { max-width: 460px; color: var(--secondary); line-height: 1.8; }
 .taxonomy-hero > .asset-image { height: 470px; width: 100%; }
-.header .nav-dropdown { width: 370px; max-height: min(65vh,560px); overflow-y: auto; }
-.header .nav-item:hover .nav-dropdown, .header .nav-item:focus-within .nav-dropdown { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+.header .nav-dropdown { width: 370px; max-height: min(65vh,560px); overflow-y: auto; visibility: hidden; opacity: 0; pointer-events: none; display: none; }
+.header .nav-item.is-open .nav-dropdown:not(.nav-dropdown--mega) { display: grid !important; grid-template-columns: repeat(2,minmax(0,1fr)); visibility: visible; opacity: 1; pointer-events: auto; }
+.header .nav-item:not(.is-open) .nav-dropdown { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 .header .nav-dropdown a { min-width: 0; white-space: normal; gap: 8px; }
 .admin-category-name { display: flex; align-items: center; gap: 14px; min-width: 200px; }
 .admin-category-name img { object-fit: cover; border-radius: 3px; }
 .admin-category-name small { display: block; font-size: 10px; color: var(--admin-muted, var(--secondary)); margin-top: 5px; }
 .admin-category-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
 .admin-category-modal { width: min(720px, calc(100vw - 28px)); max-height: 90svh; color: var(--foreground); }
+.admin-category-modal .modal-content { display:flex; flex-direction:column; max-height:90dvh; overflow-y:auto; overscroll-behavior:contain; -webkit-overflow-scrolling:touch; }
+.admin-category-modal .drawer-header { position:sticky; top:-25px; z-index:1; background:var(--background); padding-block:16px; margin-block:-16px 12px; }
+.admin-category-modal .admin-category-form { flex:0 0 auto; min-height:0; }
 .admin-category-form { display: flex; flex-direction: column; gap: 20px; padding: 20px 0; }
 .admin-category-fields { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 20px; align-items: center; }
 .admin-category-check { display: flex; align-items: center; gap: 10px; font-size: 13px; min-height: 44px; }

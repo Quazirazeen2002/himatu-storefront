@@ -268,11 +268,17 @@ p {
   box-shadow: 0 12px 30px #00000010;
   border: 1px solid var(--border);
 }
-.nav-item:hover .nav-dropdown,
-.nav-item:focus-within .nav-dropdown {
+.nav-item.is-open .nav-dropdown {
   visibility: visible;
   opacity: 1;
+  pointer-events: auto;
   transform: translateY(0);
+}
+.nav-item:not(.is-open) .nav-dropdown {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 .nav-dropdown a {
   padding-block: 11px;
@@ -387,7 +393,7 @@ p {
   display: inline-block;
   width: 5px;
   height: 5px;
-  background: var(--accent);
+  background: var(--accent-fill);
   margin-right: 7px;
   vertical-align: middle;
 }
@@ -2727,3 +2733,4 @@ details p {
 @import "./taxonomy.css";
 
 @import "./storefront-refinement.css";
+@import "./about-refresh.css";
