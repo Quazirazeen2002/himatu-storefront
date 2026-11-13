@@ -113,22 +113,33 @@ export class SocialOrdersController {
   }
   @Get("content/hero")
   async hero() {
-    return (
-      (
-        await this.prisma.db.siteContent.findUnique({
-          where: { key: "hero-slides" },
-        })
-      )?.value || { slides: [] }
-    );
+    const heroMedia = await this.prisma.db.siteContent.findUnique({
+      where: { key: "hero-media" },
+    });
+    if (heroMedia?.value) return heroMedia.value;
+
+    const heroSlides = await this.prisma.db.siteContent.findUnique({
+      where: { key: "hero-slides" },
+    });
+    if (heroSlides?.value) return heroSlides.value;
+
+    return {
+      media: {
+        type: "video",
+        src: "/videos/hero-anime.mp4",
+        poster: "/videos/hero-anime-poster.jpg",
+        alt: "HIMATU One Piece Anime Horizontal Cinematic Visual",
+      },
+    };
   }
   @Patch("admin/content/hero")
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN")
-  async saveHero(@Body() body: unknown) {
-    const value = HeroSlidesSchema.parse(body);
+  async saveHero(@Body() body: any) {
+    const value = body.media ? body : { media: body };
     return this.prisma.db.siteContent.upsert({
-      where: { key: "hero-slides" },
-      create: { key: "hero-slides", value },
+      where: { key: "hero-media" },
+      create: { key: "hero-media", value },
       update: { value },
     });
   }
