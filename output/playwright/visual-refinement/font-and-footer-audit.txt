@@ -1,9 +1,0 @@
-### Result
-{"fonts":[{"family":"inter","weight":"100 900","style":"normal","status":"loaded"},{"family":"barlow","weight":"700","style":"normal","status":"loaded"},{"family":"barlow","weight":"800","style":"italic","status":"loaded"},{"family":"geistMono","weight":"100 900","style":"normal","status":"loaded"}],"footerNewArrivals":"/shop?new=1&sort=new","verifiedEmptyState":true}
-### Ran Playwright code
-```js
-await (async page=>{await page.goto("http://localhost:3001/");await page.waitForFunction(()=>document.fonts.check("italic 800 16px barlow"));const fonts=await page.evaluate(()=>[...document.fonts].filter(f=>["inter","barlow","geistMono"].includes(f.family)).map(f=>({family:f.family,weight:f.weight,style:f.style,status:f.status})));const link=page.locator("footer").getByRole("link",{name:"New Arrivals"});const href=await link.getAttribute("href");await link.click();await page.waitForSelector(".empty-state");return {fonts,footerNewArrivals:href,verifiedEmptyState:await page.getByRole("heading",{name:"No verified new arrivals yet."}).count()===1};})(page);
-```
-### Page
-- Page URL: http://localhost:3001/shop?new=1&sort=new
-- Page Title: Shop figures | HIMATU
