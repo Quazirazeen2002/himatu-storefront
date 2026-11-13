@@ -121,6 +121,7 @@ export function HomepageSlides() {
     alt: "HIMATU One Piece Anime Horizontal Cinematic Visual",
   });
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -161,35 +162,54 @@ export function HomepageSlides() {
     const file = event.target.files?.[0];
     if (!file || !session?.accessToken) return;
     setUploading(true);
+    setUploadProgress(0);
     setMessage("");
     setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const res = await fetch("/api/v1/admin/content/hero/upload", {
+      const allowed = ["video/mp4", "video/webm", "image/jpeg", "image/png", "image/webp"];
+      if (!allowed.includes(file.type)) throw new Error("Choose an MP4, WebM, JPEG, PNG or WebP file.");
+      const start = await commerceRequest<{path:string;signedUrl:string;contentType:string}>("/admin/content/hero/upload", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.accessToken}`,
-        },
-        body: formData,
+        token: session.accessToken,
+        body: JSON.stringify({ fileName: file.name, contentType: file.type, size: file.size }),
+        signal: AbortSignal.timeout(30000),
       });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.message || err.error || "File upload failed");
-      }
-
-      const result = await res.json();
+      await new Promise<void>((resolve, reject) => {
+        const upload = new XMLHttpRequest();
+        upload.open("PUT", start.signedUrl);
+        upload.upload.onprogress = (progress) => {
+          if (progress.lengthComputable) setUploadProgress(Math.round((progress.loaded / progress.total) * 100));
+        };
+        upload.onerror = () => reject(new Error("The upload connection failed. Please try again."));
+        upload.onload = () => {
+          if (upload.status >= 200 && upload.status < 300) resolve();
+          else {
+            let detail = "Storage rejected the file";
+            try { detail = JSON.parse(upload.responseText).message || detail; } catch {}
+            reject(new Error(detail));
+          }
+        };
+        const body = new FormData();
+        body.append("cacheControl", "3600");
+        body.append("file", file);
+        upload.send(body);
+      });
+      const result = await commerceRequest<{media:{type:"video"|"image";src:string;alt:string}}>("/admin/content/hero/upload/complete", {
+        method: "POST",
+        token: session.accessToken,
+        body: JSON.stringify({ path: start.path, contentType: file.type, alt: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ") }),
+        signal: AbortSignal.timeout(30000),
+      });
       if (result.media) {
         setMedia(result.media);
-        setMessage("Hero media uploaded and updated live on the storefront!");
+        setMessage("Hero media uploaded and updated on the storefront.");
       }
-    } catch (err: any) {
-      setError(err.message || "Failed to upload file");
+    } catch (err) {
+      setError(err instanceof Error ? `${err.message} Check the Storage file-size limit if this is a large video.` : "Failed to upload file");
     } finally {
       setUploading(false);
+      event.target.value = "";
     }
   };
 
@@ -320,7 +340,7 @@ export function HomepageSlides() {
             Upload Video or Photo
           </h3>
           <p style={{ margin: "0 0 14px 0", fontSize: "12px", color: "var(--admin-muted)" }}>
-            Upload an MP4 / WebM horizontal video, or JPEG / PNG / WebP banner image directly.
+            Upload an MP4 / WebM horizontal video, or JPEG / PNG / WebP image. The upload goes directly to storage; your storage plan limit still applies.
           </p>
           <input
             type="file"
@@ -330,9 +350,7 @@ export function HomepageSlides() {
             style={{ fontSize: "12px" }}
           />
           {uploading && (
-            <p style={{ margin: "8px 0 0 0", fontSize: "12px", color: "var(--admin-accent, #6366f1)", fontWeight: 600 }}>
-              Uploading to Supabase Storage…
-            </p>
+            <div style={{ marginTop: "10px" }} role="status"><p style={{ margin: "0 0 6px", fontSize: "12px", color: "var(--admin-accent, #6366f1)", fontWeight: 600 }}>Uploading to storage… {uploadProgress}%</p><progress value={uploadProgress} max={100} style={{ width: "100%" }} aria-label="Hero media upload progress" /></div>
           )}
         </div>
 

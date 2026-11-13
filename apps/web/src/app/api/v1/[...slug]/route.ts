@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
  */
 async function forwardToBackend(request: NextRequest, slug: string[]) {
   const apiUrl = process.env.API_URL;
-  const productMutation = (request.method !== "GET" && slug[0] === "admin" && slug[1] === "products") || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff"].includes(slug[1]));
+  const heroUploadMutation = slug[0] === "admin" && slug[1] === "content" && slug[2] === "hero" && slug[3] === "upload";
+  const productMutation = (request.method !== "GET" && slug[0] === "admin" && slug[1] === "products") || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff"].includes(slug[1])) || heroUploadMutation;
   if (!apiUrl) return productMutation ? NextResponse.json({ message: slug[0] === "social-orders" ? "Order submission is temporarily unavailable. Please try again shortly." : "This dashboard feature requires the API service. Configure API_URL on the storefront and redeploy." }, { status: 503 }) : null;
 
   try {
@@ -24,7 +25,7 @@ async function forwardToBackend(request: NextRequest, slug: string[]) {
       method: request.method,
       headers,
       cache: "no-store",
-      signal: AbortSignal.timeout(request.headers.get("content-type")?.startsWith("multipart/form-data") ? 90000 : 10000),
+      signal: AbortSignal.timeout(request.headers.get("content-type")?.startsWith("multipart/form-data") ? 90000 : heroUploadMutation ? 30000 : 10000),
     };
 
     if (request.method !== "GET" && request.method !== "HEAD") {
@@ -1979,55 +1980,6 @@ export async function POST(
          ON CONFLICT (key) DO UPDATE SET value = $1, "updatedAt" = NOW()`,
         [JSON.stringify(contentValue)]
       );
-      return NextResponse.json(contentValue);
-    }
-
-    // 12. /admin/content/hero/upload
-    if (path === "admin/content/hero/upload") {
-      const formData = await request.formData();
-      const file = formData.get("file") as File | null;
-      if (!file) {
-        return NextResponse.json({ error: "No file provided" }, { status: 400 });
-      }
-      const mediaType = file.type.startsWith("video/") ? "video" : "image";
-      const ext = file.name.split(".").pop() || (mediaType === "video" ? "mp4" : "jpg");
-      const filename = `hero/hero-${Date.now()}.${ext}`;
-      const buffer = Buffer.from(await file.arrayBuffer());
-
-      const { createClient } = await import("@supabase/supabase-js");
-      const supabaseUrl = process.env.SUPABASE_URL!;
-      const supabaseKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_PUBLISHABLE_KEY!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
-
-      const { error: uploadErr } = await supabase.storage
-        .from("product-images")
-        .upload(filename, buffer, {
-          contentType: file.type || (mediaType === "video" ? "video/mp4" : "image/jpeg"),
-          upsert: true,
-        });
-
-      if (uploadErr) {
-        return NextResponse.json({ error: uploadErr.message }, { status: 500 });
-      }
-
-      const { data: pubData } = supabase.storage
-        .from("product-images")
-        .getPublicUrl(filename);
-
-      const mediaPayload = {
-        type: mediaType,
-        src: pubData.publicUrl,
-        alt: file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " "),
-      };
-
-      const contentValue = { media: mediaPayload };
-      await pool.query(
-        `INSERT INTO "SiteContent" (key, value, "updatedAt")
-         VALUES ('hero-media', $1, NOW())
-         ON CONFLICT (key) DO UPDATE SET value = $1, "updatedAt" = NOW()`,
-        [JSON.stringify(contentValue)]
-      );
-
       return NextResponse.json(contentValue);
     }
 

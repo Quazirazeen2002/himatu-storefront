@@ -4,6 +4,7 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
@@ -26,7 +27,9 @@ export interface StoredImageResult {
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly supabaseClient?: SupabaseClient;
+  private readonly heroClient?: SupabaseClient;
   private readonly bucketName = "product-images";
+  private readonly heroBucketName = "hero-media";
   private readonly printingBucketName = "custom-print-references";
 
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {
@@ -40,6 +43,47 @@ export class StorageService {
         auth: { persistSession: false },
       });
     }
+    const heroSecret = this.config.get<string>("SUPABASE_SECRET_KEY");
+    if (supabaseUrl && heroSecret) {
+      this.heroClient = createClient(supabaseUrl, heroSecret, {
+        auth: { persistSession: false },
+      });
+    }
+  }
+
+  async createHeroUpload(fileName: string, contentType: string, size: number) {
+    const allowed: Record<string, string> = {
+      "video/mp4": "mp4", "video/webm": "webm",
+      "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
+    };
+    const extension = allowed[contentType];
+    if (!extension || !fileName || fileName.length > 255 || !Number.isSafeInteger(size) || size <= 0)
+      throw new BadRequestException("Choose a valid MP4, WebM, JPEG, PNG or WebP file");
+    if (!this.heroClient)
+      throw new ServiceUnavailableException("Hero storage is not configured");
+    const path = `hero/${randomUUID()}.${extension}`;
+    const { data, error } = await this.heroClient.storage.from(this.heroBucketName).createSignedUploadUrl(path);
+    if (error || !data) throw new ServiceUnavailableException(error?.message || "Unable to prepare hero upload");
+    return { path, signedUrl: data.signedUrl, contentType };
+  }
+
+  async completeHeroUpload(path: string, contentType: string, alt: string) {
+    if (!/^hero\/[0-9a-f-]{36}\.(mp4|webm|jpg|png|webp)$/.test(path))
+      throw new BadRequestException("Invalid hero upload path");
+    if (!this.heroClient) throw new ServiceUnavailableException("Hero storage is not configured");
+    const { data, error } = await this.heroClient.storage.from(this.heroBucketName).info(path);
+    if (error || !data?.size)
+      throw new BadRequestException("Upload has not completed in storage");
+    const suffix = path.split(".").pop();
+    const expectedType = suffix === "mp4" ? "video/mp4" : suffix === "webm" ? "video/webm" : suffix === "jpg" ? "image/jpeg" : suffix === "png" ? "image/png" : "image/webp";
+    if (contentType !== expectedType || data.contentType !== expectedType)
+      throw new BadRequestException("Uploaded media type did not match the selected file");
+    const { data: publicData } = this.heroClient.storage.from(this.heroBucketName).getPublicUrl(path);
+    return {
+      type: expectedType.startsWith("video/") ? "video" as const : "image" as const,
+      src: publicData.publicUrl,
+      alt: alt.trim().slice(0, 160) || "HIMATU hero media",
+    };
   }
 
   /**

@@ -3,7 +3,7 @@ import { registerSocialOrder, channelLink, socialOrderChannels, type SocialOrder
 import { formatWhatsAppOrder } from "@/lib/whatsapp";
 import { pricing } from "@/lib/pricing";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -50,6 +50,7 @@ export function CheckoutForm() {
 
   // Session state to auto-fill logged-in customer info
   const [session, setSession] = useState<CustomerSession | null>(null);
+  const [sessionReady, setSessionReady] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<AddressDto[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string>("new");
 
@@ -65,6 +66,7 @@ export function CheckoutForm() {
     orderNotes: "",
     saveAddress: true,
   });
+  const editedFields = useRef(new Set<keyof typeof values>());
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -75,24 +77,28 @@ export function CheckoutForm() {
 
   // Load session & saved addresses
   useEffect(() => {
+    let active = true;
     authService
       .getSession()
       .then(async (data) => {
+        if (!active) return;
         if (data?.user) {
           setSession(data);
           setValues((prev) => ({
             ...prev,
-            fullName: prev.fullName || data.user.fullName || "",
-            email: prev.email || data.user.email || "",
-            phone: prev.phone || data.user.phone || "",
+            fullName: editedFields.current.has("fullName") ? prev.fullName : data.user.fullName || prev.fullName,
+            email: editedFields.current.has("email") ? prev.email : data.user.email || prev.email,
+            phone: editedFields.current.has("phone") ? prev.phone : data.user.phone || prev.phone,
           }));
 
           if (data.accessToken) {
             try {
               const addresses = await getAddresses(data.accessToken);
+              if (!active) return;
               setSavedAddresses(addresses);
               const def = addresses.find((a) => a.isDefault) || addresses[0];
-              if (def) {
+              const addressFields = ["fullName", "phone", "district", "area", "address", "postalCode"] as const;
+              if (def && !addressFields.some((field) => editedFields.current.has(field))) {
                 setSelectedAddressId(def.id);
                 setValues((prev) => ({
                   ...prev,
@@ -110,7 +116,9 @@ export function CheckoutForm() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { if (active) setSessionReady(true); });
+    return () => { active = false; };
   }, []);
 
   // Items in bag
@@ -139,6 +147,8 @@ export function CheckoutForm() {
   const grandTotal = subtotal;
 
   const handleChange = (key: keyof typeof values, val: string | boolean) => {
+    editedFields.current.add(key);
+    if (["fullName", "phone", "district", "area", "address", "postalCode"].includes(key)) setSelectedAddressId("new");
     setConfirmation(null);
     setValues((prev) => {
       const next = { ...prev, [key]: val };
@@ -150,6 +160,7 @@ export function CheckoutForm() {
   };
 
   const handleSelectSavedAddress = (addr: AddressDto) => {
+    for (const field of ["fullName", "phone", "district", "area", "address", "postalCode"] as const) editedFields.current.delete(field);
     setConfirmation(null);
     setSelectedAddressId(addr.id);
     setValues((prev) => ({
@@ -167,15 +178,28 @@ export function CheckoutForm() {
     e.preventDefault();
     setServerError(null);
     if (itemCount === 0) return;
+    // Read the actual form controls too: browser autofill may not fire React change events.
+    const form = new FormData(e.currentTarget as HTMLFormElement);
+    const submittedValues = {
+      ...values,
+      fullName: String(form.get("fullName") ?? values.fullName).trim(),
+      email: String(form.get("email") ?? values.email).trim(),
+      phone: String(form.get("phone") ?? values.phone).trim(),
+      district: String(form.get("district") ?? values.district).trim(),
+      area: String(form.get("area") ?? values.area).trim(),
+      address: String(form.get("address") ?? values.address).trim(),
+      postalCode: String(form.get("postalCode") ?? values.postalCode).trim(),
+      orderNotes: String(form.get("orderNotes") ?? values.orderNotes).trim(),
+    };
 
     const validationErrors = validate(
       {
-        fullName: values.fullName,
-        email: values.email,
-        phone: values.phone,
-        district: values.district,
-        area: values.area,
-        address: values.address,
+        fullName: submittedValues.fullName,
+        email: submittedValues.email,
+        phone: submittedValues.phone,
+        district: submittedValues.district,
+        area: submittedValues.area,
+        address: submittedValues.address,
       },
       {
         fullName: { label: "Full name", required: true, max: 120 },
@@ -191,6 +215,9 @@ export function CheckoutForm() {
         address: { label: "Delivery address", required: true, max: 500 },
       },
     );
+    if (submittedValues.address.length > 0 && submittedValues.address.length < 5) {
+      validationErrors.address = "Enter a complete delivery address (at least 5 characters).";
+    }
 
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) {
@@ -198,6 +225,10 @@ export function CheckoutForm() {
       return;
     }
 
+    if (!sessionReady) {
+      setServerError("Your account is still loading. Please try again in a moment.");
+      return;
+    }
     if (!session?.accessToken) {
       router.push("/sign-in?next=%2Fcheckout");
       return;
@@ -211,14 +242,14 @@ export function CheckoutForm() {
       const request = await registerSocialOrder(session.accessToken, {
         channel: orderChannel,
         customer: {
-          fullName: values.fullName,
-          email: values.email,
-          phone: values.phone,
-          address: values.address,
-          area: values.area,
-          district: values.district,
-          postalCode: values.postalCode,
-          orderNotes: values.orderNotes,
+          fullName: submittedValues.fullName,
+          email: submittedValues.email,
+          phone: submittedValues.phone,
+          address: submittedValues.address,
+          area: submittedValues.area,
+          district: submittedValues.district,
+          postalCode: submittedValues.postalCode,
+          orderNotes: submittedValues.orderNotes,
         },
         items: cartItems.map(({ product, quantity }) => ({
           productId: product.databaseId || null,
@@ -230,7 +261,7 @@ export function CheckoutForm() {
         })),
       });
       const message = `Request reference: ${request.id}\n` + formatWhatsAppOrder({
-        customer: values,
+        customer: submittedValues,
         items: cartItems.map(({product,quantity}) => ({name:product.name,character:product.character,quantity,unitPrice:pricing(product).current,slug:product.id})),
         subtotal:originalSubtotal,discount:productSavings,discountLabel:"Product discount",shipping:0,shippingPending:true,total:grandTotal,origin:window.location.origin,
       });
@@ -307,6 +338,7 @@ export function CheckoutForm() {
           <div className="checkout-fields-grid">
             <Input
               id="fullName"
+              name="fullName"
               label="Full name"
               required
               maxLength={120}
@@ -318,6 +350,7 @@ export function CheckoutForm() {
 
             <Input
               id="email"
+              name="email"
               label="Email address"
               type="email"
               inputMode="email"
@@ -332,6 +365,7 @@ export function CheckoutForm() {
             <div className="checkout-full-width">
               <Input
                 id="phone"
+                name="phone"
                 label="Phone number (Bangladeshi mobile)"
                 type="tel"
                 inputMode="tel"
@@ -417,6 +451,7 @@ export function CheckoutForm() {
               <label htmlFor="district">District *</label>
               <select
                 id="district"
+                name="district"
                 value={values.district}
                 onChange={(e) => handleChange("district", e.target.value)}
                 className="checkout-select"
@@ -432,6 +467,7 @@ export function CheckoutForm() {
 
             <Input
               id="area"
+              name="area"
               label="Area / Thana / Upazila"
               required
               maxLength={150}
@@ -445,6 +481,7 @@ export function CheckoutForm() {
             <div className="checkout-full-width">
               <Input
                 id="address"
+                name="address"
                 label="Full Street & House Address"
                 required
                 maxLength={500}
@@ -458,6 +495,7 @@ export function CheckoutForm() {
 
             <Input
               id="postalCode"
+              name="postalCode"
               label="Postal Code (Optional)"
               maxLength={20}
               placeholder="e.g. 1205"
@@ -473,6 +511,7 @@ export function CheckoutForm() {
                 </label>
                 <textarea
                   id="orderNotes"
+                  name="orderNotes"
                   rows={2}
                   maxLength={1000}
                   className="checkout-textarea"
@@ -512,7 +551,7 @@ export function CheckoutForm() {
         <div className="checkout-submit-block">
           <Button
             type="submit"
-            disabled={submitting || !!confirmation}
+            disabled={!sessionReady || submitting || !!confirmation}
             className="button button-primary button-lg checkout-btn"
           >
             {submitting ? (
