@@ -64,7 +64,7 @@ SUPABASE_PUBLISHABLE_KEY=your-supabase-publishable-key
 );
 
 const frontendZip = path.resolve(outputDir, "HIMATU-Hostinger-Frontend.zip");
-execSync(`cd "${frontendTemp}" && zip -rq "${frontendZip}" .`);
+execSync(`cd "${frontendTemp}" && zip -rq "${frontendZip}" . -x ".next/cache/**" -x ".next/dev/**" -x ".next/standalone/**"`);
 console.log(`Frontend packaged: ${frontendZip}`);
 
 // 4. Package Backend API for Hostinger
@@ -108,21 +108,23 @@ console.log(`Backend API packaged: ${backendZip}`);
 console.log("Creating Fullstack Monorepo Hostinger archive...");
 const fullstackZip = path.resolve(outputDir, "HIMATU-Hostinger-Fullstack.zip");
 execSync(
-  `zip -rq "${fullstackZip}" package.json package-lock.json ecosystem.config.cjs README.md docs apps packages scripts -x "**/node_modules/**" -x "**/.git/**" -x "**/output/**" -x "**/.DS_Store"`,
+  `zip -rq "${fullstackZip}" package.json package-lock.json ecosystem.config.cjs README.md docs apps packages scripts -x "**/node_modules/**" -x "**/.git/**" -x "**/output/**" -x "**/.DS_Store" -x "apps/web/.next/cache/**" -x "apps/web/.next/dev/**" -x "apps/web/.next/standalone/**"`,
   { cwd: rootDir }
 );
 console.log(`Fullstack packaged: ${fullstackZip}`);
 
-// 6. Copy to Desktop and root for convenience
-console.log("Copying archives to Desktop...");
+// 6. Clean previous zips on Desktop and copy fresh ones
+console.log("Cleaning and copying fresh archives to Desktop...");
+try {
+  execSync(`rm -f "${desktopDir}"/HIMATU-Hostinger-*.zip "${desktopDir}"/Hematu-updated.zip`);
+} catch {}
+
 fs.copyFileSync(frontendZip, path.resolve(desktopDir, "HIMATU-Hostinger-Frontend.zip"));
 fs.copyFileSync(backendZip, path.resolve(desktopDir, "HIMATU-Hostinger-API.zip"));
 fs.copyFileSync(fullstackZip, path.resolve(desktopDir, "HIMATU-Hostinger-Fullstack.zip"));
-fs.copyFileSync(fullstackZip, path.resolve(desktopDir, "Hematu-updated.zip"));
-fs.copyFileSync(fullstackZip, path.resolve(rootDir, "Hematu-updated.zip"));
 
 console.log("=== Hostinger Packaging Complete! ===");
-console.log("Files created:");
+console.log("Files created on Desktop:");
 console.log(`- ${path.resolve(desktopDir, "HIMATU-Hostinger-Frontend.zip")}`);
 console.log(`- ${path.resolve(desktopDir, "HIMATU-Hostinger-API.zip")}`);
 console.log(`- ${path.resolve(desktopDir, "HIMATU-Hostinger-Fullstack.zip")}`);
