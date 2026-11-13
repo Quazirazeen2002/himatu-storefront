@@ -3067,28 +3067,66 @@
   max-width: 680px;
 }
 
-.catalog-search-icon {
+.catalog-search-icon-btn,
+.catalog-search-wrap .catalog-search-icon {
   position: absolute;
-  left: 16px;
+  left: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--muted, #737373);
   pointer-events: none;
+  z-index: 2;
   transition: color 0.15s ease;
 }
 
+.catalog-search-icon-btn {
+  pointer-events: auto;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+}
+
+.catalog-search-wrap:focus-within .catalog-search-icon,
+.catalog-search-icon-btn:hover .catalog-search-icon {
+  color: var(--foreground, #ffffff);
+}
+
+.catalog-search-wrap input[type="search"].catalog-search-input,
+input[type="search"].catalog-search-input,
 .catalog-search-input {
-  width: 100%;
-  height: 48px;
-  padding: 0 44px 0 46px;
+  width: 100% !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  padding-left: 52px !important;
+  padding-right: 44px !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
   background: var(--surface, #0a0a0a);
   border: 1px solid var(--border, #262626);
   border-radius: 4px;
   color: var(--foreground, #ffffff);
   font-family: var(--font-ui);
-  font-size: 13px;
+  font-size: 14px !important;
   letter-spacing: 0.02em;
   transition: all 0.2s ease;
 }
 
+.catalog-search-wrap input[type="search"].catalog-search-input::-webkit-search-decoration,
+.catalog-search-wrap input[type="search"].catalog-search-input::-webkit-search-cancel-button,
+.catalog-search-wrap input[type="search"].catalog-search-input::-webkit-search-results-button,
+.catalog-search-wrap input[type="search"].catalog-search-input::-webkit-search-results-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
+.catalog-search-wrap input[type="search"].catalog-search-input:focus,
 .catalog-search-input:focus {
   outline: none;
   border-color: rgba(255, 255, 255, 0.4);
@@ -3096,13 +3134,11 @@
   box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1), 0 8px 24px rgba(0, 0, 0, 0.5);
 }
 
-.catalog-search-input:focus + .catalog-search-icon {
-  color: var(--foreground, #ffffff);
-}
-
 .catalog-search-clear {
   position: absolute;
   right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3113,6 +3149,7 @@
   background: rgba(255, 255, 255, 0.08);
   color: var(--muted, #737373);
   cursor: pointer;
+  z-index: 2;
   transition: all 0.15s ease;
 }
 

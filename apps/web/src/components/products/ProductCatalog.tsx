@@ -293,7 +293,9 @@ function CatalogContent({
     <div className="catalog-experience">
       {/* Search Input Bar */}
       <div className="catalog-search-wrap">
-        <Search size={18} className="catalog-search-icon" aria-hidden="true" />
+        <label htmlFor="catalog-search" className="catalog-search-icon-btn" aria-label="Search collection">
+          <Search size={18} className="catalog-search-icon" aria-hidden="true" />
+        </label>
         <input
           id="catalog-search"
           type="search"
