@@ -16,7 +16,7 @@ import {
   X,
   ShieldCheck,
 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { authService, type CustomerSession } from "@/lib/auth-service";
 import { useStore } from "../commerce/StoreProvider";
 import { BagItems } from "../commerce/Commerce";
@@ -31,16 +31,22 @@ export function Header() {
   const { query, setQuery } = store;
   const count = Object.values(store.bag).reduce((a, b) => a + b, 0);
   const [session, setSession] = useState<CustomerSession | null>(null);
-  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const [dropdown, setDropdown] = useState<{ label: string | null; pathname: string }>({ label: null, pathname });
+  const openDropdown = dropdown.pathname === pathname ? dropdown.label : null;
+  const setOpenDropdown = useCallback((label: string | null) => setDropdown({ label, pathname }), [pathname]);
   const closeTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const closeDropdown = () => {
+  const closeDropdown = useCallback(() => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     setOpenDropdown(null);
-    if (typeof document !== "undefined" && document.activeElement instanceof HTMLElement) {
+    if (
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement &&
+      document.activeElement.closest(".desktop-nav")
+    ) {
       document.activeElement.blur();
     }
-  };
+  }, [setOpenDropdown]);
 
   const handleMouseEnter = (label: string) => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -57,11 +63,6 @@ export function Header() {
       setOpenDropdown(null);
     }, 150);
   };
-
-  // Close dropdown whenever pathname changes
-  useEffect(() => {
-    closeDropdown();
-  }, [pathname]);
 
   // Close dropdown on click outside or escape key
   useEffect(() => {
@@ -80,7 +81,7 @@ export function Header() {
       document.removeEventListener("click", handleDocumentClick);
       document.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [closeDropdown]);
 
   useEffect(() => {
     authService
