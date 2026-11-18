@@ -61,6 +61,7 @@ export default async function ProductDetail({
             <p className="concept-disclosure">{CONCEPT_LABEL}</p>
           )}
           <StockStatus product={p} />
+          {p.shortDescription?.trim() && <p className="product-summary">{p.shortDescription}</p>}
           <dl className="product-character"><dt>THE CHARACTER</dt><dd>{p.character}</dd></dl>
           {p.specifications &&
             Object.values(p.specifications).some(Boolean) && (
@@ -87,6 +88,10 @@ export default async function ProductDetail({
           )}
         </div>
       </div>
+      {p.description?.trim() && <section className="product-description" aria-labelledby="product-description-heading">
+        <h2 id="product-description-heading">Description</h2>
+        <p>{p.description}</p>
+      </section>}
       <section className="section">
         <SectionHeading title="Keep exploring" href="/shop" />
         <ProductGrid

@@ -286,5 +286,5 @@
 .checkout-video-socials svg { flex-shrink: 0; }
 @media(max-width:480px) { .checkout-video-socials { grid-template-columns: minmax(0,1fr); } }
 
-.checkout-submit-block .checkout-btn { background: #000; color: #fff; border-color: #737373; box-shadow: 0 6px 0 #404040; }
-.checkout-submit-block .checkout-btn:hover:not(:disabled) { background: #171717; color: #fff; box-shadow: 0 8px 0 #404040; }
+[data-theme="light"] .checkout-submit-block .checkout-btn { background: #000; color: #fff; border-color: #737373; box-shadow: 0 6px 0 #404040; }
+[data-theme="light"] .checkout-submit-block .checkout-btn:hover:not(:disabled) { background: #171717; color: #fff; box-shadow: 0 8px 0 #404040; }

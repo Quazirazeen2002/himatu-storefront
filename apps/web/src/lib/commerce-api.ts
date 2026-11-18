@@ -188,7 +188,14 @@ export async function updateAdminProduct(token: string, id: string, data: any): 
 }
 
 export async function deleteAdminProduct(token: string, id: string): Promise<{success:boolean;id:string}> {
-  return request(`/admin/products/${encodeURIComponent(id)}/permanent`, {method:"DELETE", token});
+  try {
+    return await request(`/admin/products/${encodeURIComponent(id)}/permanent`, {method:"DELETE", token});
+  } catch (error) {
+    if (error instanceof CommerceApiError && error.status === 404 && error.message.startsWith("Cannot DELETE")) {
+      throw new CommerceApiError("The API service is running an older version. Deploy the updated API, then try deleting this product again.", 503);
+    }
+    throw error;
+  }
 }
 
 export async function archiveAdminProduct(token: string, id: string): Promise<ProductDto> {
@@ -852,6 +859,10 @@ export async function getAdminCategories(token: string): Promise<CategoryDto[]> 
 export async function uploadCategoryImage(token: string, id: string, file: File, imageIsDemo = false): Promise<CategoryDto> {
   const body = new FormData(); body.append("file", file); body.append("imageIsDemo", String(imageIsDemo));
   return request<CategoryDto>(`/admin/categories/${id}/image`, { method: "POST", body, token });
+}
+export async function uploadCategoryBannerImage(token: string, id: string, file: File): Promise<CategoryDto> {
+  const body = new FormData(); body.append("file", file);
+  return request<CategoryDto>(`/admin/categories/${id}/banner`, { method: "POST", body, token });
 }
 
 export { request as commerceRequest };

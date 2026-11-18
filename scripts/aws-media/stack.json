@@ -1,0 +1,60 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "HIMATU public product and hero media: private S3 with CloudFront origin access control. No database or authentication changes.",
+  "Resources": {
+    "MediaBucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "UpdateReplacePolicy": "Retain",
+      "Properties": {
+        "BucketEncryption": { "ServerSideEncryptionConfiguration": [{ "ServerSideEncryptionByDefault": { "SSEAlgorithm": "AES256" } }] },
+        "OwnershipControls": { "Rules": [{ "ObjectOwnership": "BucketOwnerEnforced" }] },
+        "PublicAccessBlockConfiguration": { "BlockPublicAcls": true, "BlockPublicPolicy": true, "IgnorePublicAcls": true, "RestrictPublicBuckets": true },
+        "VersioningConfiguration": { "Status": "Enabled" },
+        "CorsConfiguration": { "CorsRules": [{ "AllowedOrigins": ["https://himatu.com", "https://www.himatu.com"], "AllowedMethods": ["GET", "HEAD", "PUT"], "AllowedHeaders": ["content-type", "cache-control", "x-amz-*"], "ExposeHeaders": ["ETag"], "MaxAge": 3600 }] },
+        "LifecycleConfiguration": { "Rules": [{ "Id": "AbortIncompleteUploads", "Status": "Enabled", "AbortIncompleteMultipartUpload": { "DaysAfterInitiation": 7 } }] },
+        "Tags": [{ "Key": "Project", "Value": "HIMATU" }, { "Key": "Purpose", "Value": "Public media offload" }]
+      }
+    },
+    "OriginAccess": {
+      "Type": "AWS::CloudFront::OriginAccessControl",
+      "Properties": { "OriginAccessControlConfig": { "Name": { "Fn::Sub": "${AWS::StackName}-s3" }, "OriginAccessControlOriginType": "s3", "SigningBehavior": "always", "SigningProtocol": "sigv4" } }
+    },
+    "MediaCachePolicy": {
+      "Type": "AWS::CloudFront::CachePolicy",
+      "Properties": { "CachePolicyConfig": {
+        "Name": { "Fn::Sub": "${AWS::StackName}-media" }, "MinTTL": 0, "DefaultTTL": 86400, "MaxTTL": 31536000,
+        "ParametersInCacheKeyAndForwardedToOrigin": {
+          "EnableAcceptEncodingGzip": true, "EnableAcceptEncodingBrotli": true,
+          "CookiesConfig": { "CookieBehavior": "none" }, "QueryStringsConfig": { "QueryStringBehavior": "none" },
+          "HeadersConfig": { "HeaderBehavior": "whitelist", "Headers": ["Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers"] }
+        }
+      } }
+    },
+    "Distribution": {
+      "Type": "AWS::CloudFront::Distribution",
+      "Properties": { "DistributionConfig": {
+        "Enabled": true, "Comment": "HIMATU product images and hero videos", "HttpVersion": "http2and3", "PriceClass": "PriceClass_200",
+        "Origins": [{ "Id": "MediaS3", "DomainName": { "Fn::GetAtt": ["MediaBucket", "RegionalDomainName"] }, "OriginAccessControlId": { "Fn::GetAtt": ["OriginAccess", "Id"] }, "S3OriginConfig": { "OriginAccessIdentity": "" } }],
+        "DefaultCacheBehavior": { "TargetOriginId": "MediaS3", "ViewerProtocolPolicy": "redirect-to-https", "AllowedMethods": ["GET", "HEAD", "OPTIONS"], "CachedMethods": ["GET", "HEAD", "OPTIONS"], "Compress": true, "CachePolicyId": { "Ref": "MediaCachePolicy" } },
+        "ViewerCertificate": { "CloudFrontDefaultCertificate": true }
+      } }
+    },
+    "BucketPolicy": {
+      "Type": "AWS::S3::BucketPolicy",
+      "Properties": { "Bucket": { "Ref": "MediaBucket" }, "PolicyDocument": {
+        "Version": "2012-10-17",
+        "Statement": [
+          { "Sid": "CloudFrontPublicMediaOnly", "Effect": "Allow", "Principal": { "Service": "cloudfront.amazonaws.com" }, "Action": "s3:GetObject", "Resource": [{ "Fn::Sub": "${MediaBucket.Arn}/product-images/*" }, { "Fn::Sub": "${MediaBucket.Arn}/hero-media/*" }], "Condition": { "StringEquals": { "AWS:SourceArn": { "Fn::Sub": "arn:${AWS::Partition}:cloudfront::${AWS::AccountId}:distribution/${Distribution}" } } } },
+          { "Sid": "DenyInsecureTransport", "Effect": "Deny", "Principal": "*", "Action": "s3:*", "Resource": [{ "Fn::GetAtt": ["MediaBucket", "Arn"] }, { "Fn::Sub": "${MediaBucket.Arn}/*" }], "Condition": { "Bool": { "aws:SecureTransport": "false" } } }
+        ]
+      } }
+    }
+  },
+  "Outputs": {
+    "BucketName": { "Value": { "Ref": "MediaBucket" } },
+    "Region": { "Value": { "Ref": "AWS::Region" } },
+    "DistributionId": { "Value": { "Ref": "Distribution" } },
+    "PublicMediaUrl": { "Value": { "Fn::Sub": "https://${Distribution.DomainName}" } }
+  }
+}

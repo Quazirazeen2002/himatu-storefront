@@ -146,9 +146,9 @@ describe("Phase B: Cart, Wishlist, Addresses, Checkout & Orders", () => {
           userId,
           addressSnapshot: mockAddress,
           subtotal: 11800,
-          shippingCharge: 80,
+          shippingCharge: 135,
           discountAmount: 0,
-          totalAmount: 11880,
+          totalAmount: 11935,
           currency: "BDT",
           orderStatus: "PENDING",
           paymentStatus: "PENDING",
@@ -204,22 +204,22 @@ describe("Phase B: Cart, Wishlist, Addresses, Checkout & Orders", () => {
   });
 
   describe("Shipping Calculation Engine", () => {
-    it("should charge ৳80 inside Dhaka", () => {
+    it("should charge ৳135 inside Dhaka", () => {
       const result = shippingService.calculateShipping("Dhaka", 5000);
-      expect(result.shippingCharge).toBe(80);
+      expect(result.shippingCharge).toBe(135);
       expect(result.isFreeShipping).toBe(false);
     });
 
-    it("should charge ৳130 outside Dhaka", () => {
+    it("should charge ৳135 outside Dhaka", () => {
       const result = shippingService.calculateShipping("Chittagong", 5000);
-      expect(result.shippingCharge).toBe(130);
+      expect(result.shippingCharge).toBe(135);
       expect(result.isFreeShipping).toBe(false);
     });
 
-    it("should give free shipping for orders at or above ৳15,000 threshold", () => {
+    it("should keep the ৳135 charge for larger orders", () => {
       const result = shippingService.calculateShipping("Sylhet", 16000);
-      expect(result.shippingCharge).toBe(0);
-      expect(result.isFreeShipping).toBe(true);
+      expect(result.shippingCharge).toBe(135);
+      expect(result.isFreeShipping).toBe(false);
     });
   });
 
@@ -275,8 +275,8 @@ describe("Phase B: Cart, Wishlist, Addresses, Checkout & Orders", () => {
       expect(order.userId).toBe(userId);
       expect(order.orderNumber).toMatch(/^HMT-\d{8}-\d{5}$/);
       expect(order.subtotal).toBe(11800);
-      expect(order.shippingCharge).toBe(80); // Dhaka
-      expect(order.totalAmount).toBe(11880);
+      expect(order.shippingCharge).toBe(135); // Dhaka
+      expect(order.totalAmount).toBe(11935);
       expect(order.paymentMethod).toBe("BKASH");
       expect(order.paymentStatus).toBe("PENDING");
       expect(order.orderStatus).toBe("PENDING");

@@ -22,6 +22,7 @@ import { RolesGuard, Roles, CurrentUser } from "../auth/roles";
 import {
   SocialRequestSchema,
   ConfirmSocialOrderSchema,
+  InvoicePaymentSchema,
   HeroSlidesSchema,
 } from "@himatu/shared";
 
@@ -87,6 +88,12 @@ export class SocialOrdersController {
   @Roles("ADMIN")
   invoice(@Param("id") id: string) {
     return this.orders.getInvoice(id);
+  }
+  @Patch("admin/invoices/:id/payment")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("ADMIN")
+  payment(@CurrentUser() user: { id: string }, @Param("id") id: string, @Body() body: unknown) {
+    return this.orders.updateInvoicePayment(id, InvoicePaymentSchema.parse(body).paidAmount, user.id);
   }
   @Get("admin/invoices/:id/pdf")
   @UseGuards(AuthGuard, RolesGuard)

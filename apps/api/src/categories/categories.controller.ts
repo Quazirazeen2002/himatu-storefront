@@ -52,6 +52,20 @@ export class CategoriesController {
     catch (error) { await this.storage.deleteProductImage(stored.storagePath); throw error; }
   }
 
+  @Post("admin/categories/:id/banner")
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles("ADMIN", "MODERATOR")
+  @UseInterceptors(FileInterceptor("file", { limits: { fileSize: 10 * 1024 * 1024 } }))
+  async uploadBanner(@Param("id", new ParseUUIDPipe()) id: string, @UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException("Select a JPEG, PNG or WebP image.");
+    await this.categoriesService.listAdminCategories().then(categories => {
+      if (!categories.some(category => category.id === id)) throw new BadRequestException("Category does not exist.");
+    });
+    const stored = await this.storage.uploadCategoryBannerImage(id, file);
+    try { return await this.categoriesService.setCategoryBannerImage(id, stored.publicUrl); }
+    catch (error) { await this.storage.deleteProductImage(stored.storagePath); throw error; }
+  }
+
   @Post("admin/categories")
   @UseGuards(AuthGuard, RolesGuard)
   @Roles("ADMIN", "MODERATOR")

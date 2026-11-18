@@ -4,11 +4,13 @@ import {
   Injectable,
   InternalServerErrorException,
   Logger,
+  ServiceUnavailableException,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
+import { LocalMedia } from "./local-media";
 
 export interface UploadedFileDto {
   buffer: Buffer;
@@ -26,10 +28,17 @@ export interface StoredImageResult {
 export class StorageService {
   private readonly logger = new Logger(StorageService.name);
   private readonly supabaseClient?: SupabaseClient;
+  private readonly heroClient?: SupabaseClient;
+  private readonly localMedia?: LocalMedia;
   private readonly bucketName = "product-images";
+  private readonly heroBucketName = "hero-media";
   private readonly printingBucketName = "custom-print-references";
 
   constructor(@Inject(ConfigService) private readonly config: ConfigService) {
+    const mediaPath = this.config.get<string>("MEDIA_STORAGE_PATH");
+    const mediaUrl = this.config.get<string>("MEDIA_PUBLIC_URL");
+    if (Boolean(mediaPath) !== Boolean(mediaUrl)) throw new Error("Configure both MEDIA_STORAGE_PATH and MEDIA_PUBLIC_URL");
+    if (mediaPath && mediaUrl) this.localMedia = new LocalMedia(mediaPath, mediaUrl);
     const supabaseUrl = this.config.get<string>("SUPABASE_URL");
     const secretKey =
       this.config.get<string>("SUPABASE_SECRET_KEY") ||
@@ -39,6 +48,63 @@ export class StorageService {
       this.supabaseClient = createClient(supabaseUrl, secretKey, {
         auth: { persistSession: false },
       });
+    }
+    const heroSecret = this.config.get<string>("SUPABASE_SECRET_KEY");
+    if (supabaseUrl && heroSecret) {
+      this.heroClient = createClient(supabaseUrl, heroSecret, {
+        auth: { persistSession: false },
+      });
+    }
+  }
+
+  async createHeroUpload(fileName: string, contentType: string, size: number) {
+    const allowed: Record<string, string> = {
+      "video/mp4": "mp4", "video/webm": "webm",
+      "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp",
+    };
+    const extension = allowed[contentType];
+    if (!extension || !fileName || fileName.length > 255 || !Number.isSafeInteger(size) || size <= 0)
+      throw new BadRequestException("Choose a valid MP4, WebM, JPEG, PNG or WebP file");
+    if (this.localMedia) {
+      if (size > 50 * 1024 * 1024) throw new BadRequestException("Hero media exceeds the 50 MB upload limit");
+      return { uploadMode: "multipart" as const, uploadUrl: "/admin/content/hero/upload/file", contentType };
+    }
+    if (!this.heroClient)
+      throw new ServiceUnavailableException("Hero storage is not configured");
+    const path = `hero/${randomUUID()}.${extension}`;
+    const { data, error } = await this.heroClient.storage.from(this.heroBucketName).createSignedUploadUrl(path);
+    if (error || !data) throw new ServiceUnavailableException(error?.message || "Unable to prepare hero upload");
+    return { path, signedUrl: data.signedUrl, contentType };
+  }
+
+  async completeHeroUpload(path: string, contentType: string, alt: string) {
+    if (this.localMedia) throw new BadRequestException("Use the authenticated media upload endpoint");
+    if (!/^hero\/[0-9a-f-]{36}\.(mp4|webm|jpg|png|webp)$/.test(path))
+      throw new BadRequestException("Invalid hero upload path");
+    if (!this.heroClient) throw new ServiceUnavailableException("Hero storage is not configured");
+    const { data, error } = await this.heroClient.storage.from(this.heroBucketName).info(path);
+    if (error || !data?.size)
+      throw new BadRequestException("Upload has not completed in storage");
+    const suffix = path.split(".").pop();
+    const expectedType = suffix === "mp4" ? "video/mp4" : suffix === "webm" ? "video/webm" : suffix === "jpg" ? "image/jpeg" : suffix === "png" ? "image/png" : "image/webp";
+    if (contentType !== expectedType || data.contentType !== expectedType)
+      throw new BadRequestException("Uploaded media type did not match the selected file");
+    const { data: publicData } = this.heroClient.storage.from(this.heroBucketName).getPublicUrl(path);
+    return {
+      type: expectedType.startsWith("video/") ? "video" as const : "image" as const,
+      src: publicData.publicUrl,
+      alt: alt.trim().slice(0, 160) || "HIMATU hero media",
+    };
+  }
+
+  async uploadHeroFile(file: { path: string; size: number; mimetype: string }, alt: string) {
+    if (!this.localMedia) throw new ServiceUnavailableException("Hostinger media storage is not configured");
+    try {
+      const stored = await this.localMedia.saveHero(file.path, file.size, file.mimetype);
+      return { type: file.mimetype.startsWith("video/") ? "video" as const : "image" as const, src: stored.publicUrl, alt: alt.trim().slice(0, 160) || "HIMATU hero media" };
+    } catch {
+      this.logger.warn("Hostinger hero upload failed");
+      throw new BadRequestException("Unable to save media. Check its content and the 50 MB limit.");
     }
   }
 
@@ -191,8 +257,12 @@ export class StorageService {
     return this.uploadPublicImage(`categories/${categoryId}`, file);
   }
 
+  async uploadCategoryBannerImage(categoryId: string, file: UploadedFileDto): Promise<StoredImageResult> {
+    return this.uploadPublicImage(`categories/${categoryId}/banners`, file);
+  }
+
   private async uploadPublicImage(folder: string, file: UploadedFileDto): Promise<StoredImageResult> {
-    if (!this.supabaseClient) {
+    if (!this.supabaseClient && !this.localMedia) {
       throw new InternalServerErrorException("Supabase Storage client is not configured");
     }
 
@@ -215,11 +285,16 @@ export class StorageService {
       );
     }
 
+    if (this.localMedia) {
+      try { return await this.localMedia.saveImage(folder, file.buffer, file.mimetype); }
+      catch { throw new InternalServerErrorException("Unable to save image to media storage"); }
+    }
+
     const ext = file.mimetype === "image/png" ? ".png" : file.mimetype === "image/webp" ? ".webp" : ".jpg";
     const uniqueFileName = `${randomUUID()}${ext}`;
     const storagePath = `${folder}/${uniqueFileName}`;
 
-    const { error } = await this.supabaseClient.storage
+    const { error } = await this.supabaseClient!.storage
       .from(this.bucketName)
       .upload(storagePath, file.buffer, {
         contentType: file.mimetype,
@@ -231,7 +306,7 @@ export class StorageService {
       throw new InternalServerErrorException(`Image upload failed: ${error.message}`);
     }
 
-    const { data: urlData } = this.supabaseClient.storage
+    const { data: urlData } = this.supabaseClient!.storage
       .from(this.bucketName)
       .getPublicUrl(storagePath);
 
@@ -245,6 +320,13 @@ export class StorageService {
    * Delete an image from Supabase Storage
    */
   async deleteProductImage(storagePath: string): Promise<void> {
+    if (storagePath?.startsWith("local:")) {
+      try { await this.localMedia?.remove(storagePath); }
+      catch { this.logger.warn("Unable to remove local media file"); }
+      return;
+    }
+    // Retain source objects for rollback while public media is offloaded.
+    if (this.localMedia) return;
     if (!this.supabaseClient || !storagePath) return;
 
     try {

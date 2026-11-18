@@ -21,7 +21,7 @@ export function ProductActions({ product, onAdded }: { product: FigureProduct; o
   return (
     <div className="product-actions">
       <p className="eyebrow">QUANTITY</p>
-      <QuantitySelector quantity={quantity} onChange={setQuantity} />
+      <QuantitySelector quantity={quantity} onChange={setQuantity} max={Math.max(1, remaining)} />
       <div className="detail-actions">
         <Button
           disabled={sold || remaining === 0 || quantity > remaining}

@@ -80,12 +80,6 @@ const NAV_ITEMS: NavItem[] = [
     group: "CATALOGUE",
   },
   {
-    label: "Media Library",
-    href: "/admin/media",
-    icon: ImageIcon,
-    group: "CATALOGUE",
-  },
-  {
     label: "Inventory",
     href: "/admin/inventory",
     icon: Boxes,

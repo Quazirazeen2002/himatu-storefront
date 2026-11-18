@@ -9,6 +9,7 @@ export interface ProductBase {
   productCategory?: string;
   character: string;
   description: string;
+  shortDescription?: string | null;
   color: string;
   art: string;
   isNew?: boolean;

@@ -1,0 +1,9 @@
+# Checkout form and product deletion repair
+
+The checkout form now waits for account data to load before enabling submission. A delayed saved-address response no longer overwrites fields the customer has already edited. On submit, the form reads the actual controls, so browser autofill values are included even when autofill did not trigger a React change event. The delivery-address length is checked before requesting an order; the entered details are used for both the saved order request and the social message.
+
+The customer's reported need to click again for every character was reproduced in a temporary public checkout probe. The header's document-wide click listener closed the navigation dropdown and blurred *every* active element, including checkout inputs. The blur is now restricted to focused elements inside desktop navigation. The temporary probe was removed after Chromium confirmed that one click allows multiple characters and that moving to the next field preserves the first field's value.
+
+Permanent product deletion is already implemented in the current API with ADMIN and MODERATOR permissions and a confirmation dialog in the dashboard. A safe invalid-ID probe returned HTTP 401 on the current local API but HTTP 404 (`Cannot DELETE`) on `api.himatu.com` on 13 November 2026. The deployed API is older than the current repository. Deploy the updated API archive before the storefront archive. The dashboard now explains this specific version mismatch instead of showing the raw Express error.
+
+Validation: monorepo build and typecheck passed; four product deletion permission tests and four social-order registration tests passed. CheckoutForm lint passed. Existing `commerce-api.ts` lint errors predate this change. No real product was deleted or customer order placed during validation. A signed-in end-to-end checkout submission remains to be verified after deployment with a test account.

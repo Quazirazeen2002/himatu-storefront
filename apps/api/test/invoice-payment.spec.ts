@@ -1,0 +1,11 @@
+import "reflect-metadata";
+import { ConfigService } from "@nestjs/config";
+import { SocialOrdersService } from "../src/social-orders/social-orders.service";
+import { PrismaService } from "../src/prisma/prisma.service";
+const tx={order:{findUnique:jest.fn(),update:jest.fn()},orderInvoice:{findUnique:jest.fn(),updateMany:jest.fn(),update:jest.fn()}};
+const service=new SocialOrdersService({db:{$transaction:async(fn:(db:typeof tx)=>unknown)=>fn(tx)}} as unknown as PrismaService,new ConfigService());
+beforeEach(()=>{jest.resetAllMocks();tx.order.findUnique.mockResolvedValue({id:"o",orderStatus:"CONFIRMED",totalAmount:1155});tx.orderInvoice.findUnique.mockResolvedValue({id:"i",snapshot:{totalAmount:1155,paidAmount:135},reviewedAt:new Date()});tx.orderInvoice.updateMany.mockResolvedValue({count:1});});
+it("persists a partial payment and the matching invoice snapshot atomically",async()=>{await service.updateInvoicePayment("o",500,"admin");expect(tx.order.update).toHaveBeenCalledWith({where:{id:"o"},data:{paidAmount:500,paymentStatus:"PENDING"}});expect(tx.orderInvoice.update).toHaveBeenCalledWith(expect.objectContaining({data:expect.objectContaining({snapshot:expect.objectContaining({paidAmount:500})})}));});
+it("marks a fully settled order paid",async()=>{await service.updateInvoicePayment("o",1155,"admin");expect(tx.order.update).toHaveBeenCalledWith(expect.objectContaining({data:{paidAmount:1155,paymentStatus:"PAID"}}));});
+it("rejects overpayment, negative and fractional amounts",async()=>{for(const amount of [1156,-1,1.5])await expect(service.updateInvoicePayment("o",amount,"admin")).rejects.toThrow("Paid amount");expect(tx.order.update).not.toHaveBeenCalled();});
+it("blocks pending orders and sent/sending invoices",async()=>{tx.order.findUnique.mockResolvedValueOnce({orderStatus:"PENDING"});await expect(service.updateInvoicePayment("o",135,"admin")).rejects.toThrow("confirmed order");tx.orderInvoice.updateMany.mockResolvedValue({count:0});await expect(service.updateInvoicePayment("o",135,"admin")).rejects.toThrow("sent");expect(tx.order.update).not.toHaveBeenCalled();});

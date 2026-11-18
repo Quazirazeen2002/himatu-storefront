@@ -17,7 +17,21 @@ const empty: DemoState = {
 let snapshot: DemoState | undefined;
 const listeners = new Set<() => void>();
 let storeProducts: Product[] = catalogue;
-export function registerStoreProducts(items: Product[]) { storeProducts = items; }
+export function registerStoreProducts(items: Product[]) {
+  storeProducts = items;
+  // Reconcile only after a successful catalogue load, never against the empty
+  // hydration catalogue. Removed products must not survive as invisible cart items.
+  if (snapshot) update(state => ({
+    ...state,
+    bag: Object.fromEntries(Object.entries(state.bag)
+      .filter(([id]) => canAddToBag(id))
+      .map(([id, quantity]) => [id, Math.min(quantity, quantityLimit(id))])),
+  }));
+}
+const quantityLimit = (id: string) => {
+  const product = storeProducts.find(p => p.id === id);
+  return product?.kind === "figure" ? Math.max(0, Math.min(10, product.stockQuantity ?? 10)) : 10;
+};
 const validId = (id: string) => /^[a-zA-Z0-9][a-zA-Z0-9_-]{0,199}$/.test(id);
 const known = (id: string) => [...storeProducts, ...concepts].some((p) => p.id === id);
 const canAddToBag = (id: string) =>
@@ -103,9 +117,20 @@ export function setQuantity(id: string, quantity: number) {
   if ((!canAddToBag(id) && quantity !== 0) || !Number.isFinite(quantity)) return;
   update((state) => {
     const bag = { ...state.bag };
-    const q = Math.max(0, Math.min(10, Math.floor(quantity)));
+    const q = Math.max(0, Math.min(quantityLimit(id), Math.floor(quantity)));
     if (q) bag[id] = q;
     else delete bag[id];
+    return { ...state, bag };
+  });
+}
+export function completePurchase(items: { id: string; quantity: number }[]) {
+  update(state => {
+    const bag = { ...state.bag };
+    for (const item of items) {
+      const remaining = (bag[item.id] || 0) - item.quantity;
+      if (remaining > 0) bag[item.id] = remaining;
+      else delete bag[item.id];
+    }
     return { ...state, bag };
   });
 }

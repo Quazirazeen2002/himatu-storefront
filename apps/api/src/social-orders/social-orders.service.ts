@@ -13,10 +13,11 @@ import type {
   SocialRequestInput,
   ConfirmSocialOrderInput,
 } from "@himatu/shared";
+import { DELIVERY_CHARGE_BDT } from "@himatu/shared";
 import { randomUUID } from "node:crypto";
 import nodemailer from "nodemailer";
 import { invoiceLogo } from "./invoice-logo";
-import { invoiceHtml, invoicePdf, type InvoiceSnapshot } from "./invoice";
+import { invoiceHtml, invoicePdf, amountPaid, amountDue, type InvoiceSnapshot } from "./invoice";
 
 @Injectable()
 export class SocialOrdersService {
@@ -79,7 +80,7 @@ export class SocialOrdersService {
     return { ok: true };
   }
   async confirm(id: string, input: ConfirmSocialOrderInput, role: string) {
-    if (input.paid && role !== "ADMIN")
+    if ((input.paid || input.paidAmount !== undefined) && role !== "ADMIN")
       throw new ForbiddenException(
         "Only administrators may record received payment",
       );
@@ -90,6 +91,9 @@ export class SocialOrdersService {
       total = subtotal + input.shippingCharge - input.discountAmount;
     if (total < 0 || total > 2000000000)
       throw new BadRequestException("Invalid order total");
+    const paidAmount = input.paidAmount ?? (input.paid ? total : Math.min(DELIVERY_CHARGE_BDT, total));
+    if (!Number.isSafeInteger(paidAmount) || paidAmount < 0 || paidAmount > total)
+      throw new BadRequestException("Paid amount must be between zero and the order total");
     return this.prisma.db.$transaction(async (tx) => {
       const request = await tx.socialOrderRequest.findUnique({ where: { id } });
       if (!request) throw new NotFoundException("Request not found");
@@ -158,8 +162,9 @@ export class SocialOrdersService {
           shippingCharge: input.shippingCharge,
           discountAmount: input.discountAmount,
           totalAmount: total,
+          paidAmount,
           paymentMethod: "BKASH",
-          paymentStatus: input.paid ? "PAID" : "PENDING",
+          paymentStatus: paidAmount === total ? "PAID" : "PENDING",
           orderStatus: "CONFIRMED",
           customerNotes: `Social channel: ${request.channel}\n${c.orderNotes}`,
           items: { create: lines },
@@ -190,13 +195,35 @@ export class SocialOrdersService {
     const request = await this.submit(user.id, { ...input, channel: "manual" });
     return this.confirm(request.id, confirmation, role);
   }
+  async updateInvoicePayment(orderId: string, paidAmount: number, reviewerId: string) {
+    return this.prisma.db.$transaction(async tx => {
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order || order.orderStatus === "PENDING" || order.orderStatus === "CANCELLED")
+        throw new BadRequestException("A confirmed order is required");
+      if (!Number.isSafeInteger(paidAmount) || paidAmount < 0 || paidAmount > order.totalAmount)
+        throw new BadRequestException("Paid amount must be between zero and the order total");
+      const invoice = await tx.orderInvoice.findUnique({ where: { orderId } });
+      if (!invoice) throw new BadRequestException("Review the invoice first");
+      const claim = await tx.orderInvoice.updateMany({
+        where: { id: invoice.id, sendingAt: null, sentAt: null, reviewedAt: invoice.reviewedAt },
+        data: { reviewedAt: new Date() },
+      });
+      if (!claim.count) throw new ConflictException("This invoice has been sent, is being sent, or changed. Refresh before editing.");
+      const paymentStatus = paidAmount === order.totalAmount ? "PAID" : "PENDING";
+      await tx.order.update({ where: { id: orderId }, data: { paidAmount, paymentStatus } });
+      return tx.orderInvoice.update({ where: { orderId }, data: {
+        reviewedAt: new Date(), reviewedBy: reviewerId,
+        snapshot: { ...(invoice.snapshot as object), paidAmount, paymentStatus },
+      } });
+    });
+  }
   async reviewInvoice(orderId: string, reviewerId: string) {
     const order = await this.prisma.db.order.findUnique({
       where: { id: orderId },
       include: { items: true, user: true },
     });
-    if (!order || order.orderStatus === "CANCELLED")
-      throw new BadRequestException("A non-cancelled order is required");
+    if (!order || order.orderStatus === "CANCELLED" || order.orderStatus === "PENDING")
+      throw new BadRequestException("Confirm the order before preparing its invoice");
     const address = order.addressSnapshot as Record<string, string>;
     const snapshot: InvoiceSnapshot = {
       number: order.orderNumber,
@@ -219,6 +246,7 @@ export class SocialOrdersService {
       shippingCharge: order.shippingCharge,
       discountAmount: order.discountAmount,
       totalAmount: order.totalAmount,
+      paidAmount: order.paymentStatus === "PAID" ? order.totalAmount : order.paidAmount,
       paymentStatus: order.paymentStatus,
     };
     const old = await this.prisma.db.orderInvoice.findUnique({
@@ -301,7 +329,7 @@ export class SocialOrdersService {
         "Order changed. Review the invoice again before sending.",
       );
     const claim = await this.prisma.db.orderInvoice.updateMany({
-      where: { id: invoice.id, sendingAt: null, sentAt: null },
+      where: { id: invoice.id, sendingAt: null, sentAt: null, reviewedAt: invoice.reviewedAt },
       data: { sendingAt: new Date() },
     });
     if (!claim.count)
@@ -329,7 +357,7 @@ export class SocialOrdersService {
           {filename:"himatu-logo.png",content:Buffer.from(invoiceLogo,"base64"),cid:"himatu-logo"},
           {filename:`HIMATU-Invoice-${snapshot.number.replace(/[^a-zA-Z0-9_-]/g,"-")}.pdf`,content:await invoicePdf(snapshot),contentType:"application/pdf"},
         ],
-        text: `HIMATU Invoice ${snapshot.number}\nTotal: BDT ${snapshot.totalAmount}\nContact 01714546809 for order support.`,
+        text: `HIMATU Invoice ${snapshot.number}\nTotal: BDT ${snapshot.totalAmount}\nPaid: BDT ${amountPaid(snapshot)}\nAmount due: BDT ${amountDue(snapshot)}\nContact 01714546809 for order support.`,
       });
       if (!sent.accepted?.length)
         throw new Error("Sender did not accept recipient");

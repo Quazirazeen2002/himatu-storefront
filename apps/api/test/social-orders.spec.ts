@@ -191,6 +191,7 @@ describe("Social request enrollment", () => {
         data: expect.objectContaining({
           subtotal: 2000,
           totalAmount: 1980,
+          paidAmount: 135,
           orderStatus: "CONFIRMED",
           paymentStatus: "PENDING",
         }),

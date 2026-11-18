@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { authService, type CustomerSession } from "@/lib/auth-service";
 import { InvoiceReview } from "./InvoiceReview";
 import { getAllAdminProducts, commerceRequest } from "@/lib/commerce-api";
+import { DELIVERY_CHARGE_BDT } from "@/lib/pricing";
 import type {
   ConfirmSocialOrderInput,
   SocialRequestInput,
@@ -34,9 +35,10 @@ const blank = (): ConfirmSocialOrderInput => ({
   items: [
     { name: "", slug: "manual", quantity: 1, unitPrice: 0, productId: null },
   ],
-  shippingCharge: 0,
+  shippingCharge: DELIVERY_CHARGE_BDT,
   discountAmount: 0,
   paid: false,
+  paidAmount: DELIVERY_CHARGE_BDT,
 });
 export function SocialOrderManagement() {
   const [products, setProducts] = useState<ProductDto[]>([]);
@@ -80,9 +82,10 @@ export function SocialOrderManagement() {
     setDraft({
       customer: r.customer,
       items: r.items,
-      shippingCharge: 0,
+      shippingCharge: DELIVERY_CHARGE_BDT,
       discountAmount: 0,
       paid: false,
+      paidAmount: DELIVERY_CHARGE_BDT,
     });
     setConfirmed(null);
     setError("");
@@ -101,6 +104,7 @@ export function SocialOrderManagement() {
           token: session.accessToken,
           body: JSON.stringify({
             ...draft,
+            paidAmount: session.user.role === "ADMIN" ? draft.paidAmount : undefined,
             ...(manual
               ? { clientReference: manualReference, channel: "manual" }
               : {}),
@@ -310,16 +314,6 @@ export function SocialOrderManagement() {
               </label>
             ))}
           </div>
-          {session?.user.role === "ADMIN" && (
-            <label>
-              <input
-                type="checkbox"
-                checked={draft.paid}
-                onChange={(e) => setDraft({ ...draft, paid: e.target.checked })}
-              />{" "}
-              Payment has been received
-            </label>
-          )}
           <p>
             <strong>
               Total: BDT{" "}
@@ -328,6 +322,8 @@ export function SocialOrderManagement() {
                 draft.discountAmount}
             </strong>
           </p>
+          <label className="field"><span>Paid amount · BDT</span><input type="number" min="0" step="1" disabled={session?.user.role !== "ADMIN"} value={draft.paidAmount ?? DELIVERY_CHARGE_BDT} onChange={e=>setDraft({...draft,paid:false,paidAmount:Number(e.target.value)})} /></label>
+          <p><strong>Amount due: BDT {Math.max(0,draft.items.reduce((n,i)=>n+i.unitPrice*i.quantity,0)+draft.shippingCharge-draft.discountAmount-(draft.paidAmount ?? DELIVERY_CHARGE_BDT)).toLocaleString()}</strong></p>
           <div className="staff-actions">
             <button
               className="admin-btn admin-btn--primary"

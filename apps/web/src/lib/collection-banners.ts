@@ -1,9 +1,8 @@
-import { storefrontTaxonomy, type CategoryDto } from "@himatu/shared";
+import type { CategoryDto } from "@himatu/shared";
 
 type Banner = { src: string; alt: string; credit?: string; source?: string; license?: string; licenseUrl?: string };
 
-// These are editorial collection covers. The category image remains editable in Admin;
-// a custom image replaces the local default without changing this mapping.
+// Editorial banner defaults are independent of the category card cover.
 const banners: Record<string, Banner> = {
   "action-figures": { src:"/images/collections/action-figures-shelf.jpeg", alt:"A full shelf of action figures in the photograph supplied by HIMATU" },
   bleach: { src:"/images/collections/bleach-wallpaper.webp", alt:"Illustrated Bleach characters with Ichigo Kurosaki in the foreground" },
@@ -17,9 +16,8 @@ const banners: Record<string, Banner> = {
 };
 
 export function collectionBanner(category: CategoryDto): Banner | null {
-  const banner = banners[category.slug];
-  if (!banner) return null;
-  const image = category.imageUrl || "";
-  const defaultImage = storefrontTaxonomy.find(entry => entry.slug === category.slug)?.imageUrl;
-  return !image || image === defaultImage || image === banner.src ? banner : null;
+  const fallback = banners[category.slug];
+  const src = category.bannerImageUrl || fallback?.src || category.imageUrl;
+  if (!src) return null;
+  return fallback?.src === src ? fallback : { src, alt: `${category.name} collection banner` };
 }

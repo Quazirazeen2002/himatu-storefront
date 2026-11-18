@@ -14,6 +14,7 @@ import {
   getServerSnapshot,
   subscribe,
   setQuantity,
+  completePurchase,
   toggleWish,
   markViewed,
   registerStoreProducts,
@@ -34,6 +35,7 @@ interface Store extends DemoState {
   query: string;
   setQuery: (q: string) => void;
   setQuantity: typeof setQuantity;
+  completePurchase: typeof completePurchase;
   toggleWish: typeof toggleWish;
   markViewed: typeof markViewed;
   drawer: "bag" | "menu" | "search" | null;
@@ -88,6 +90,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         query,
         setQuery,
         setQuantity,
+        completePurchase,
         toggleWish,
         markViewed,
       }}
