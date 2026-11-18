@@ -2,6 +2,7 @@ import "reflect-metadata";
 import { Test } from "@nestjs/testing";
 import { INestApplication } from "@nestjs/common";
 import request from "supertest";
+import { access } from "node:fs/promises";
 import { HeroUploadController } from "../src/social-orders/hero-upload.controller";
 import { StorageService } from "../src/storage/storage.service";
 import { PrismaService } from "../src/prisma/prisma.service";
@@ -14,6 +15,7 @@ describe("hero media upload", () => {
   const storage = {
     createHeroUpload: jest.fn().mockResolvedValue({path:"hero/12345678-1234-1234-1234-123456789abc.mp4",signedUrl:"https://example.test/signed-upload",contentType:"video/mp4"}),
     completeHeroUpload: jest.fn().mockResolvedValue(media),
+    uploadHeroFile: jest.fn().mockResolvedValue(media),
   };
   const upsert = jest.fn().mockResolvedValue({});
   beforeAll(async () => {
@@ -53,5 +55,17 @@ describe("hero media upload", () => {
     expect(finish.body.media).toEqual(media);
     expect(storage.completeHeroUpload).toHaveBeenCalledWith(start.body.path,"video/mp4","new hero");
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({where:{key:"hero-media"},create:{key:"hero-media",value:{media}}}));
+  });
+  it("protects filesystem uploads with the admin role", async () => {
+    const result = await request(app.getHttpServer()).post("/admin/content/hero/upload/file").attach("file", Buffer.from("example"), { filename: "hero.mp4", contentType: "video/mp4" });
+    expect(result.status).toBe(403);
+    expect(storage.uploadHeroFile).not.toHaveBeenCalled();
+  });
+  it("publishes authenticated disk uploads and removes their temporary file", async () => {
+    const result = await request(app.getHttpServer()).post("/admin/content/hero/upload/file").set("x-test-role", "ADMIN").field("alt", "new hero").attach("file", Buffer.from("example"), { filename: "hero.mp4", contentType: "video/mp4" });
+    expect(result.status).toBe(201);
+    expect(result.body.media).toEqual(media);
+    const file = storage.uploadHeroFile.mock.calls[0][0] as { path: string };
+    await expect(access(file.path)).rejects.toThrow();
   });
 });

@@ -169,12 +169,25 @@ export function HomepageSlides() {
     try {
       const allowed = ["video/mp4", "video/webm", "image/jpeg", "image/png", "image/webp"];
       if (!allowed.includes(file.type)) throw new Error("Choose an MP4, WebM, JPEG, PNG or WebP file.");
-      const start = await commerceRequest<{path:string;signedUrl:string;contentType:string}>("/admin/content/hero/upload", {
+      const start = await commerceRequest<{path:string;signedUrl:string;contentType:string;uploadMode?:"multipart";uploadUrl?:string}>("/admin/content/hero/upload", {
         method: "POST",
         token: session.accessToken,
         body: JSON.stringify({ fileName: file.name, contentType: file.type, size: file.size }),
         signal: AbortSignal.timeout(30000),
       });
+      if (start.uploadMode === "multipart") {
+        const body = new FormData();
+        body.append("file", file);
+        body.append("alt", file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " "));
+        setUploadProgress(-1);
+        const result = await commerceRequest<{media:{type:"video"|"image";src:string;alt:string}}>("/admin/content/hero/upload/file", {
+          method: "POST", token: session.accessToken, body, signal: AbortSignal.timeout(90000),
+        });
+        setUploadProgress(100);
+        setMedia(result.media);
+        setMessage("Hero media uploaded and updated on the storefront.");
+        return;
+      }
       await new Promise<void>((resolve, reject) => {
         const upload = new XMLHttpRequest();
         upload.open("PUT", start.signedUrl);
@@ -350,7 +363,7 @@ export function HomepageSlides() {
             style={{ fontSize: "12px" }}
           />
           {uploading && (
-            <div style={{ marginTop: "10px" }} role="status"><p style={{ margin: "0 0 6px", fontSize: "12px", color: "var(--admin-accent, #6366f1)", fontWeight: 600 }}>Uploading to storage… {uploadProgress}%</p><progress value={uploadProgress} max={100} style={{ width: "100%" }} aria-label="Hero media upload progress" /></div>
+            <div style={{ marginTop: "10px" }} role="status"><p style={{ margin: "0 0 6px", fontSize: "12px", color: "var(--admin-accent, #6366f1)", fontWeight: 600 }}>Uploading to storage… {uploadProgress >= 0 ? `${uploadProgress}%` : ""}</p><progress value={uploadProgress >= 0 ? uploadProgress : undefined} max={100} style={{ width: "100%" }} aria-label="Hero media upload progress" /></div>
           )}
         </div>
 

@@ -8,6 +8,10 @@ export const CreateCategorySchema = z.object({
     if (value.startsWith("/images/") && !value.includes("\\") && !/[\r\n]/.test(value)) return true;
     try { return new URL(value).protocol === "https:"; } catch { return false; }
   }, "Use a local /images/ path or an HTTPS image URL").optional().nullable(),
+  bannerImageUrl: z.string().max(2048).refine(value => {
+    if (value.startsWith("/images/") && !value.includes("\\") && !/[\r\n]/.test(value)) return true;
+    try { return new URL(value).protocol === "https:"; } catch { return false; }
+  }, "Use a local /images/ path or an HTTPS image URL").optional().nullable(),
   kind: z.enum(["PRODUCT_TYPE", "FRANCHISE"]).default("FRANCHISE"),
   family: z.enum(["ANIME", "MARVEL", "DC", "MOVIES", "OTHER"]).optional().nullable(),
   imageIsDemo: z.boolean().default(false),

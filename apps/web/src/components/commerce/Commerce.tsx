@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/config";
 import { Button, ButtonLink, IconButton } from "../ui/Primitives";
 import { AssetImage } from "../products/AssetImage";
 import { assets } from "@/lib/assets";
-import { pricedTotal } from "@/lib/pricing";
+import { pricedTotal, DELIVERY_CHARGE_BDT } from "@/lib/pricing";
 import { ProductPrice } from "../products/ProductPrice";
 export function WishlistButton({ id }: { id: string }) {
   const store = useStore();
@@ -24,9 +24,11 @@ export function WishlistButton({ id }: { id: string }) {
 export function QuantitySelector({
   quantity,
   onChange,
+  max = 10,
 }: {
   quantity: number;
   onChange: (q: number) => void;
+  max?: number;
 }) {
   return (
     <div className="quantity">
@@ -40,7 +42,7 @@ export function QuantitySelector({
       <span aria-live="polite">{quantity}</span>
       <IconButton
         label="Increase quantity"
-        disabled={quantity >= 10}
+        disabled={quantity >= max}
         onClick={() => onChange(quantity + 1)}
       >
         <Plus size={15} />
@@ -80,12 +82,12 @@ export function OrderSummary({
       </div>
       <div className="summary-line">
         <span>Delivery</span>
-        <span>Calculated at checkout</span>
+        <span>{formatPrice(count ? DELIVERY_CHARGE_BDT : 0)}</span>
       </div>
       <hr />
       <div className="summary-line">
-        <strong>Items total</strong>
-        <strong>{formatPrice(total)}</strong>
+        <strong>Total</strong>
+        <strong>{formatPrice(count ? total + DELIVERY_CHARGE_BDT : 0)}</strong>
       </div>
       {checkoutLink && (
         <ButtonLink href="/checkout">PROCEED TO CHECKOUT</ButtonLink>
@@ -135,6 +137,7 @@ export function BagItems() {
             </p>
             <QuantitySelector
               quantity={store.bag[p.id]}
+              max={Math.min(10, p.kind === "figure" ? p.stockQuantity ?? 10 : 10)}
               onChange={(q) => store.setQuantity(p.id, q)}
             />
           </div>

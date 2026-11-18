@@ -19,6 +19,7 @@ export function toStorefrontProduct(item: ProductDto): FigureProduct {
     name: item.name,
     character: specifications.character || original?.character || item.name,
     description: item.description,
+    shortDescription: item.shortDescription,
     franchise: item.category?.name || original?.franchise || "HIMATU",
     collection: item.category?.slug || original?.collection || "other-collections",
     productCategory: item.productType?.slug || original?.productCategory,

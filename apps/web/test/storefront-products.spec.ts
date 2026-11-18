@@ -22,6 +22,12 @@ it("publishes an admin-created figure with current stock, sale price and ordered
   registerStoreProducts([p]);
   expect(sanitizeState({bag:{[p.id]:2},wishlist:[p.id]})).toMatchObject({bag:{[p.id]:2},wishlist:[p.id]});
 });
+it("preserves the admin summary and full description separately, including paragraph breaks", () => {
+  const p=toStorefrontProduct({...product,shortDescription:"Collector summary",description:"First paragraph.\n\nSecond paragraph."});
+  expect(p.shortDescription).toBe("Collector summary");
+  expect(p.description).toBe("First paragraph.\n\nSecond paragraph.");
+  expect(toStorefrontProduct({...product,shortDescription:null}).shortDescription).toBeNull();
+});
 it("does not resurrect archived database figures from the legacy catalogue", () => {
   expect(mergeStorefrontProducts([{...product,isActive:false}]).some(p=>p.id===product.slug)).toBe(false);
   expect(mergeStorefrontProducts([]).some(p=>p.id==="straw-hat-captain")).toBe(false);

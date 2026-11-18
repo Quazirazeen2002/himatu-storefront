@@ -10,7 +10,7 @@ export const dynamic = "force-dynamic";
 async function forwardToBackend(request: NextRequest, slug: string[]) {
   const apiUrl = process.env.API_URL;
   const heroUploadMutation = slug[0] === "admin" && slug[1] === "content" && slug[2] === "hero" && slug[3] === "upload";
-  const productMutation = (request.method !== "GET" && slug[0] === "admin" && slug[1] === "products") || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff"].includes(slug[1])) || heroUploadMutation;
+  const productMutation = (request.method !== "GET" && slug[0] === "admin" && ["products", "categories"].includes(slug[1])) || slug[0] === "social-orders" || (slug[0] === "admin" && ["social-orders", "invoices", "staff"].includes(slug[1])) || heroUploadMutation;
   if (!apiUrl) return productMutation ? NextResponse.json({ message: slug[0] === "social-orders" ? "Order submission is temporarily unavailable. Please try again shortly." : "This dashboard feature requires the API service. Configure API_URL on the storefront and redeploy." }, { status: 503 }) : null;
 
   try {

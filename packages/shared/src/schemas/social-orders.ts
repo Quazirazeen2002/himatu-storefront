@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DELIVERY_CHARGE_BDT } from "../commerce-constants";
 export const SocialChannelSchema = z.enum([
   "whatsapp",
   "instagram",
@@ -34,10 +35,12 @@ export const SocialRequestSchema = z.object({
 export const ConfirmSocialOrderSchema = z.object({
   items: z.array(SocialItemSchema).min(1).max(50),
   customer: SocialCustomerSchema,
-  shippingCharge: z.number().int().min(0).max(1000000).default(0),
+  shippingCharge: z.number().int().min(0).max(1000000).default(DELIVERY_CHARGE_BDT),
   discountAmount: z.number().int().min(0).max(100000000).default(0),
   paid: z.boolean().default(false),
+  paidAmount: z.number().int().min(0).max(2000000000).optional(),
 });
+export const InvoicePaymentSchema = z.object({ paidAmount: z.number().int().min(0).max(2000000000) });
 export const HeroSlidesSchema = z.object({
   slides: z
     .array(

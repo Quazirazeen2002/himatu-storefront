@@ -9,6 +9,17 @@ describe("Independent product categories and franchises", () => {
   const db = { category:{ findMany:jest.fn(), findUnique:jest.fn(), create:jest.fn(), update:jest.fn() }, product:{count:jest.fn()} };
   const service = new CategoriesService({ db } as unknown as PrismaService);
   beforeEach(() => jest.resetAllMocks());
+  it("updates card and banner images independently", async () => {
+    const original = makeCategory({ bannerImageUrl: "/images/collections/original.webp" });
+    db.category.findUnique.mockResolvedValue(original);
+    db.category.update.mockImplementation(({ data }) => Promise.resolve({ ...original, ...data }));
+    const card = await service.setCategoryImage(original.id, "/images/categories/new.webp", false);
+    expect(card.bannerImageUrl).toBe("/images/collections/original.webp");
+    expect(db.category.update.mock.calls[0][0].data).not.toHaveProperty("bannerImageUrl");
+    const banner = await service.setCategoryBannerImage(original.id, "/images/collections/new.webp");
+    expect(banner.imageUrl).toBe(original.imageUrl);
+    expect(db.category.update.mock.calls[1][0].data).not.toHaveProperty("imageUrl");
+  });
   it("returns separate product-category counts without mixing franchise counts", async () => {
     db.category.findMany.mockResolvedValue([makeCategory({_count:{products:7,typedProducts:0}}),makeCategory({kind:"PRODUCT_TYPE",family:null,slug:"t-shirts",_count:{products:0,typedProducts:3}})]);
     const result=await service.listPublicCategories();

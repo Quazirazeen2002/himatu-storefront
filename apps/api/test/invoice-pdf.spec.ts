@@ -1,4 +1,12 @@
 import { invoiceHtml, invoicePdf, type InvoiceSnapshot } from "../src/social-orders/invoice";
+it("subtracts an editable delivery deposit and shows Paid after Total",()=>{
+  const base={number:"QA",date:"2026-11-14",customer:{fullName:"QA",email:"qa@example.com",phone:"01700000000",address:"QA",area:"QA",district:"Dhaka"},items:[],subtotal:1020,shippingCharge:135,discountAmount:0,totalAmount:1155,paidAmount:135,paymentStatus:"PENDING"};
+  const html=invoiceHtml(base);
+  expect(html).toContain('<span>Paid</span><span>Tk 135.00</span>');
+  expect(html).toContain('<span>Amount due</span><span>Tk 1,020.00</span>');
+  expect(html.indexOf('<span>Total</span>')).toBeLessThan(html.indexOf('<span>Paid</span>'));
+  expect(invoiceHtml({...base,paidAmount:500})).toContain('<span>Amount due</span><span>Tk 655.00</span>');
+});
 const snapshot:InvoiceSnapshot={number:"HMT-2026-0042",date:"2026-11-12",customer:{fullName:"A Collector",email:"customer@example.com",phone:"01700000000",address:"House 10, Road 2",area:"Dhanmondi",district:"Dhaka"},items:[{productName:"Luffy Gear Five",quantity:2,unitPrice:5525,lineTotal:11050}],subtotal:11050,shippingCharge:120,discountAmount:500,totalAmount:10670,paymentStatus:"PENDING"};
 it("renders the supplied logo, reviewed discounts and correct unpaid balance",()=>{const html=invoiceHtml(snapshot);expect(html).toContain('data:image/png;base64,');expect(html).toContain('Order discount');expect(html).toContain('Tk 10,670.00');expect(invoiceHtml({...snapshot,paymentStatus:"PAID"})).toContain('<span>Amount due</span><span>Tk 0.00</span>');});
 it("generates a real PDF for both short and multi-page orders",async()=>{for(const items of [snapshot.items,Array.from({length:50},(_,i)=>({...snapshot.items[0],productName:`Collectible ${i+1} with a detailed character title`}))]){const buffer=await invoicePdf({...snapshot,items});expect(buffer.subarray(0,5).toString()).toBe('%PDF-');expect(buffer.length).toBeGreaterThan(4000);expect(buffer.toString('latin1')).toContain('HIMATU Invoice');}});

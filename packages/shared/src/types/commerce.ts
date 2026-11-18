@@ -22,6 +22,7 @@ export interface CategoryDto {
   slug: string;
   description: string | null;
   imageUrl: string | null;
+  bannerImageUrl?: string | null;
   isActive: boolean;
   displayOrder: number;
   productCount?: number;

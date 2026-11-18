@@ -21,7 +21,10 @@
     "db:generate": "npm run generate -w @himatu/api",
     "db:migrate": "npm run migrate -w @himatu/api",
     "db:status": "npm run migrate:status -w @himatu/api",
-    "dev:web": "npm run dev -w @himatu/web --"
+    "dev:web": "npm run dev -w @himatu/web --",
+    "hostinger:prepare": "node scripts/hostinger-migration/prepare.mjs",
+    "hostinger:export": "node scripts/hostinger-migration/export.mjs",
+    "hostinger:test": "node --test scripts/hostinger-migration/migration.test.mjs"
   },
   "devDependencies": {
     "jest": "29.7.0",

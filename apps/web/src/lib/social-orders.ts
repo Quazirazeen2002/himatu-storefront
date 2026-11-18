@@ -1,20 +1,7 @@
 import { commerceRequest } from "./commerce-api";
 import type { SocialRequestInput } from "@himatu/shared";
-export const socialOrderChannels = [
-  { id: "whatsapp", name: "WhatsApp", url: "https://wa.me/8801714546809" },
-  { id: "instagram", name: "Instagram", url: "https://ig.me/m/himatuofficial" },
-  { id: "facebook", name: "Facebook", url: "https://m.me/Himatuofficial" },
-  {
-    id: "tiktok",
-    name: "TikTok",
-    url: "https://www.tiktok.com/@otaku.vault.bd",
-  },
-] as const;
-export type SocialOrderChannel = (typeof socialOrderChannels)[number]["id"];
-export const channelLink = (channel: SocialOrderChannel, message: string) =>
-  channel === "whatsapp"
-    ? `https://wa.me/8801714546809?text=${encodeURIComponent(message)}`
-    : socialOrderChannels.find((c) => c.id === channel)!.url;
+export const channelLink = (message: string) =>
+  `https://wa.me/8801714546809?text=${encodeURIComponent(message)}`;
 export async function registerSocialOrder(
   token: string,
   input: Omit<SocialRequestInput, "clientReference">,

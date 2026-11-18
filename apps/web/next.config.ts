@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   output: "standalone",
   images: {
     remotePatterns: [
+      { protocol: "https", hostname: "media.himatu.com" },
       {
         protocol: "https",
         hostname: "tqwgmmiljcumomhxwxit.supabase.co",

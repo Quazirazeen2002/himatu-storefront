@@ -1,7 +1,7 @@
 "use client";
-import { registerSocialOrder, channelLink, socialOrderChannels, type SocialOrderChannel } from "@/lib/social-orders";
+import { registerSocialOrder, channelLink } from "@/lib/social-orders";
 import { formatWhatsAppOrder } from "@/lib/whatsapp";
-import { pricing } from "@/lib/pricing";
+import { pricing, DELIVERY_CHARGE_BDT } from "@/lib/pricing";
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
@@ -70,8 +70,7 @@ export function CheckoutForm() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [orderChannel, setOrderChannel] = useState<SocialOrderChannel>("whatsapp");
-  const [confirmation, setConfirmation] = useState<{id:string;channel:SocialOrderChannel;message:string}|null>(null);
+  const [confirmation, setConfirmation] = useState<{id:string;message:string}|null>(null);
   const [copied, setCopied] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -144,7 +143,7 @@ export function CheckoutForm() {
 
   const originalSubtotal = cartItems.reduce((sum, { product, quantity }) => sum + pricing(product).original * quantity, 0);
   const productSavings = originalSubtotal - subtotal;
-  const grandTotal = subtotal;
+  const grandTotal = subtotal + DELIVERY_CHARGE_BDT;
 
   const handleChange = (key: keyof typeof values, val: string | boolean) => {
     editedFields.current.add(key);
@@ -240,7 +239,7 @@ export function CheckoutForm() {
     if (chat) chat.opener = null;
     try {
       const request = await registerSocialOrder(session.accessToken, {
-        channel: orderChannel,
+        channel: "whatsapp",
         customer: {
           fullName: submittedValues.fullName,
           email: submittedValues.email,
@@ -263,15 +262,13 @@ export function CheckoutForm() {
       const message = `Request reference: ${request.id}\n` + formatWhatsAppOrder({
         customer: submittedValues,
         items: cartItems.map(({product,quantity}) => ({name:product.name,character:product.character,quantity,unitPrice:pricing(product).current,slug:product.id})),
-        subtotal:originalSubtotal,discount:productSavings,discountLabel:"Product discount",shipping:0,shippingPending:true,total:grandTotal,origin:window.location.origin,
+        subtotal:originalSubtotal,discount:productSavings,discountLabel:"Product discount",shipping:DELIVERY_CHARGE_BDT,total:grandTotal,origin:window.location.origin,
       });
-      setConfirmation({id:request.id,channel:orderChannel,message});
+      setConfirmation({id:request.id,message});
+      store.completePurchase(cartItems.map(({ product, quantity }) => ({ id: product.id, quantity })));
       setCopied(false);
       // Only hand off customer details once the request has been saved.
-      try { if (chat && !chat.closed) chat.location.href = channelLink(orderChannel, message); } catch { /* The saved request can be reopened below if the window was closed. */ }
-      if (orderChannel !== "whatsapp") {
-        try { await navigator.clipboard.writeText(message); setCopied(true); } catch { /* A visible copy fallback remains available. */ }
-      }
+      try { if (chat && !chat.closed) chat.location.href = channelLink(message); } catch { /* The saved request can be reopened below if the window was closed. */ }
     } catch (error) {
       chat?.close();
       setServerError(
@@ -283,6 +280,23 @@ export function CheckoutForm() {
       setSubmitting(false);
     }
   };
+
+  if (confirmation) return (
+    <div>
+<section className="checkout-card order-confirmation" role="status" tabIndex={-1}>
+            <CheckCircle2 size={32} aria-hidden="true" />
+            <h2>YOUR ORDER REQUEST IS RECEIVED.</h2>
+            <p>Your message is ready in WhatsApp. Tap Send to continue with HIMATU.</p>
+            <p className="order-reference">Reference: {confirmation.id}</p>
+            <div className="social-draft-actions">
+              <a className="button button--outline" href={channelLink(confirmation.message)} target="_blank" rel="noopener noreferrer"><MessageCircle size={16}/>OPEN WHATSAPP</a>
+              <button type="button" className="button button--outline" onClick={async()=>{try{await navigator.clipboard.writeText(confirmation.message);setCopied(true);}catch{setCopied(false);}}}><Copy size={16}/>{copied?"DETAILS COPIED":"COPY ORDER DETAILS"}</button>
+            </div>
+            <details><summary>View order message</summary><textarea className="social-order-message" aria-label="Complete order message" rows={12} readOnly value={confirmation.message} onFocus={event=>event.currentTarget.select()}/></details>
+          </section>
+      <ButtonLink href="/shop">CONTINUE SHOPPING</ButtonLink>
+    </div>
+  );
 
   if (itemCount === 0) {
     return (
@@ -525,28 +539,6 @@ export function CheckoutForm() {
           </div>
         </section>
 
-        <section className="checkout-card checkout-channel" aria-labelledby="order-channel-heading">
-          <h2 id="order-channel-heading">HOW WOULD YOU LIKE TO ORDER?</h2>
-          <div className="checkout-channel-options">
-            {socialOrderChannels.map(channel => <label key={channel.id} className={`option-card ${orderChannel === channel.id ? "selected" : ""}`}>
-              <input type="radio" name="orderChannel" value={channel.id} checked={orderChannel === channel.id} disabled={submitting} onChange={() => {setOrderChannel(channel.id);setConfirmation(null);setServerError(null);}} />
-              <span><strong>{channel.name}</strong><small>{channel.id === "whatsapp" ? "Open with your order message ready to send." : channel.id === "tiktok" ? "Open HIMATU’s profile, tap Message, then paste your order details." : "Open the conversation, then paste your copied order details."}</small></span>
-            </label>)}
-          </div>
-        </section>
-        {confirmation && (
-          <section className="checkout-card order-confirmation" role="status" tabIndex={-1}>
-            <CheckCircle2 size={32} aria-hidden="true" />
-            <h2>YOUR ORDER REQUEST IS RECEIVED.</h2>
-            <p>{confirmation.channel === "whatsapp" ? "Your message is ready in WhatsApp. Tap Send to continue with HIMATU." : copied ? confirmation.channel === "tiktok" ? "Your details are copied. Tap Message on HIMATU’s TikTok profile, then paste and send your order." : `Your details are copied. Paste them into your ${socialOrderChannels.find(channel => channel.id === confirmation.channel)?.name} conversation and tap Send.` : "Copy your order details below and paste them into the conversation to continue with HIMATU."}</p>
-            <p className="order-reference">Reference: {confirmation.id}</p>
-            <div className="social-draft-actions">
-              <a className="button button--outline" href={channelLink(confirmation.channel,confirmation.message)} target="_blank" rel="noopener noreferrer"><MessageCircle size={16}/>OPEN {confirmation.channel.toUpperCase()}</a>
-              <button type="button" className="button button--outline" onClick={async()=>{try{await navigator.clipboard.writeText(confirmation.message);setCopied(true);}catch{setCopied(false);}}}><Copy size={16}/>{copied?"DETAILS COPIED":"COPY ORDER DETAILS"}</button>
-            </div>
-            <details><summary>View order message</summary><textarea className="social-order-message" aria-label="Complete order message" rows={12} readOnly value={confirmation.message} onFocus={event=>event.currentTarget.select()}/></details>
-          </section>
-        )}
         {/* Submit Action */}
         <div className="checkout-submit-block">
           <Button
@@ -561,7 +553,7 @@ export function CheckoutForm() {
               </>
             ) : (
               <>
-                <span>{confirmation ? "ORDER RECEIVED" : `ORDER VIA ${orderChannel.toUpperCase()}`} · ৳{grandTotal.toLocaleString()} BDT</span>
+                <span>{confirmation ? "ORDER RECEIVED" : "ORDER VIA WHATSAPP"} · ৳{grandTotal.toLocaleString()} BDT</span>
               </>
             )}
           </Button>
@@ -618,7 +610,7 @@ export function CheckoutForm() {
 
             <div className="summary-line">
               <span>Delivery</span>
-              <span>Confirmed before dispatch</span>
+              <span>{formatPrice(DELIVERY_CHARGE_BDT)}</span>
             </div>
 
             <div className="summary-divider" />

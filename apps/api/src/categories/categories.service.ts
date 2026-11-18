@@ -8,6 +8,7 @@ interface CategoryInput {
   slug: string;
   description?: string | null;
   imageUrl?: string | null;
+  bannerImageUrl?: string | null;
   imageIsDemo?: boolean;
   kind?: CategoryKind;
   family?: FranchiseFamily | null;
@@ -24,7 +25,7 @@ export class CategoriesService {
   private dto(category: Category & { _count?: { products: number; typedProducts: number } }): CategoryDto {
     return {
       id: category.id, name: category.name, slug: category.slug, description: category.description,
-      imageUrl: category.imageUrl, imageIsDemo: category.imageIsDemo, kind: category.kind, family: category.family,
+      imageUrl: category.imageUrl, bannerImageUrl: category.bannerImageUrl, imageIsDemo: category.imageIsDemo, kind: category.kind, family: category.family,
       isActive: category.isActive, displayOrder: category.displayOrder,
       productCount: category._count ? (category.kind === "PRODUCT_TYPE" ? category._count.typedProducts : category._count.products) : 0,
     };
@@ -44,7 +45,7 @@ export class CategoriesService {
     if (await this.prisma.db.category.findUnique({ where: { slug: data.slug } })) throw new ConflictException(`Category with slug '${data.slug}' already exists`);
     const kind = data.kind ?? "FRANCHISE";
     try {
-      return this.dto(await this.prisma.db.category.create({ data: { ...data, imageUrl: data.imageUrl || defaultCover, imageIsDemo: data.imageUrl ? data.imageIsDemo ?? false : true, kind, family: kind === "PRODUCT_TYPE" ? null : data.family ?? "ANIME" } }));
+      return this.dto(await this.prisma.db.category.create({ data: { ...data, imageUrl: data.imageUrl || defaultCover, bannerImageUrl: data.bannerImageUrl || data.imageUrl || defaultCover, imageIsDemo: data.imageUrl ? data.imageIsDemo ?? false : true, kind, family: kind === "PRODUCT_TYPE" ? null : data.family ?? "ANIME" } }));
     } catch (error) {
       if (error && typeof error === "object" && "code" in error && error.code === "P2002") throw new ConflictException(`Category with slug '${data.slug}' already exists`);
       throw error;
@@ -64,5 +65,8 @@ export class CategoriesService {
   }
   async setCategoryImage(id: string, imageUrl: string, imageIsDemo: boolean) {
     return this.updateCategory(id, { imageUrl, imageIsDemo });
+  }
+  async setCategoryBannerImage(id: string, bannerImageUrl: string) {
+    return this.updateCategory(id, { bannerImageUrl });
   }
 }

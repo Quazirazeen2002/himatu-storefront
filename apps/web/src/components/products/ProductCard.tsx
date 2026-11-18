@@ -45,6 +45,7 @@ export function ProductCard({
         </div>
         {showCommerceMetadata && <ProductPrice product={p} />}
       </div>
+      {p.shortDescription?.trim() && <p className="product-card-summary">{p.shortDescription}</p>}
       {showCommerceMetadata && <StockStatus product={p} />}
       {quickView && <Modal open={quickView} onClose={() => setQuickView(false)} title="Quick view" className="product-quick-modal"><div className="product-quick-layout"><AssetImage asset={assets.product(p)} /><div><p className="eyebrow">{p.franchise}</p><h3>{p.name}</h3><ProductPrice product={p} />{p.kind !== "concept" && <StockStatus product={p} />}{p.kind === "reference" ? <ProductEnquiry product={p} onAdded={() => setQuickView(false)} /> : p.kind !== "concept" ? <ProductActions product={p} onAdded={() => setQuickView(false)} /> : <p className="concept-disclosure">{CONCEPT_LABEL}</p>}<Link className="text-link" href={`/products/${p.id}`}>VIEW FULL DETAILS ↗</Link></div></div></Modal>}
     </article>

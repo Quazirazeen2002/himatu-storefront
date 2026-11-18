@@ -1,5 +1,7 @@
 import type { FigureProduct } from "./types";
 
+export { DELIVERY_CHARGE_BDT } from "@himatu/shared";
+
 export function salePriceForDiscount(price: number, percent: number): number | null {
   if (!Number.isSafeInteger(price) || price <= 0 || !Number.isFinite(percent) || percent < 0 || percent >= 100) {
     throw new Error("Use a positive whole-BDT price and a discount from 0 to below 100 percent.");

@@ -112,6 +112,11 @@
   .brand-story-rule span { transform: scaleX(1) !important; }
 }
 /* Constrain intrinsic toolbar and form widths on narrow screens. */
+.product-summary { font-family: var(--font-ui); font-size: clamp(16px, 1.2vw, 19px); line-height: 1.65; color: var(--foreground); white-space: pre-line; overflow-wrap: anywhere; margin-block: 18px 24px; }
+.product-description { padding-block: clamp(32px, 5vw, 64px); border-bottom: 1px solid var(--border); }
+.product-description h2 { font-family: var(--font-ui); font-size: clamp(20px, 2vw, 28px); font-weight: 700; margin-bottom: 18px; }
+.product-description p { max-width: 80ch; color: var(--secondary); font-size: 16px; line-height: 1.8; white-space: pre-line; overflow-wrap: anywhere; }
+.product-card-summary { color: var(--secondary); font-size: 13px; line-height: 1.6; margin-block: 10px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
 .catalog-experience, .catalog-bar, .catalog-dropdowns-group { min-width: 0; max-width: 100%; }
 .promo-input, .onepage-checkout-main, .onepage-checkout-sidebar, .checkout-card-header > div { min-width: 0; }
 .checkout-card-header h2 { overflow-wrap: anywhere; }

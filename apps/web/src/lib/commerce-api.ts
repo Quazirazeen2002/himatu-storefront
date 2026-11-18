@@ -860,6 +860,10 @@ export async function uploadCategoryImage(token: string, id: string, file: File,
   const body = new FormData(); body.append("file", file); body.append("imageIsDemo", String(imageIsDemo));
   return request<CategoryDto>(`/admin/categories/${id}/image`, { method: "POST", body, token });
 }
+export async function uploadCategoryBannerImage(token: string, id: string, file: File): Promise<CategoryDto> {
+  const body = new FormData(); body.append("file", file);
+  return request<CategoryDto>(`/admin/categories/${id}/banner`, { method: "POST", body, token });
+}
 
 export { request as commerceRequest };
 

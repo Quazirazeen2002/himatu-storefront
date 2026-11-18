@@ -29,7 +29,7 @@ export function Header() {
   const store = useStore();
   const dialog = useRef<HTMLDialogElement>(null);
   const { query, setQuery } = store;
-  const count = Object.values(store.bag).reduce((a, b) => a + b, 0);
+  const count = store.bagProducts.reduce((total, product) => total + (store.bag[product.id] || 0), 0);
   const [session, setSession] = useState<CustomerSession | null>(null);
   const [dropdown, setDropdown] = useState<{ label: string | null; pathname: string }>({ label: null, pathname });
   const openDropdown = dropdown.pathname === pathname ? dropdown.label : null;

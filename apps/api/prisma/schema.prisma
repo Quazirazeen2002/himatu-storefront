@@ -92,6 +92,7 @@ model Category {
   slug         String    @unique @db.VarChar(160)
   description  String?
   imageUrl     String?
+  bannerImageUrl String?
   kind         CategoryKind @default(FRANCHISE)
   family       FranchiseFamily? @default(ANIME)
   imageIsDemo  Boolean @default(false)
@@ -214,6 +215,7 @@ model Order {
   shippingCharge     Int
   discountAmount     Int                  @default(0)
   totalAmount        Int
+  paidAmount         Int                  @default(0)
   currency           String               @default("BDT") @db.Char(3)
   orderStatus        OrderStatus          @default(PENDING)
   paymentStatus      PaymentStatus        @default(PENDING)
